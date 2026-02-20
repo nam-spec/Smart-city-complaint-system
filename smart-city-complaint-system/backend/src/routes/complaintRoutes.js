@@ -1,5 +1,9 @@
 const express = require("express");
-const { createComplaint } = require("../controllers/complaintController");
+const {
+  createComplaint,
+  getAllComplaints,
+  updateComplaintStatus
+} = require("../controllers/complaintController");
 const { protect, authorize } = require("../middleware/authMiddleware");
 const upload = require("../middleware/uploadMiddleware");
 
@@ -13,4 +17,19 @@ router.post(
   createComplaint
 );
 
+// Admin: Get all complaints
+router.get(
+  "/",
+  protect,
+  authorize("admin"),
+  getAllComplaints
+);
+
+// Admin: Update complaint status
+router.patch(
+  "/:id/status",
+  protect,
+  authorize("admin"),
+  updateComplaintStatus
+);
 module.exports = router;
