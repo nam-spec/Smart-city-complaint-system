@@ -1,4 +1,6 @@
 const Complaint = require("../models/Complaint");
+const calculatePriority = require("../utils/priorityEngine");
+const axios = require("axios");
 
 exports.createComplaint = async (req, res) => {
   try {
@@ -17,18 +19,37 @@ exports.createComplaint = async (req, res) => {
       });
     }
 
+    let category = "Unclassified";
+
+try {
+  const mlResponse = await axios.post("http://localhost:5001/predict", {
+    text: description
+  });
+
+  category = mlResponse.data.category;
+} catch (error) {
+  console.log("ML service unavailable, using default category");
+}
+
+    const priorityScore = await calculatePriority(
+  description,
+  parseFloat(latitude),
+  parseFloat(longitude)
+);
     const complaint = await Complaint.create({
-      citizen: req.user._id,
-      description,
-      latitude,
-      longitude,
-      imagePath: req.file.path
-    });
+  citizen: req.user._id,
+  description,
+  latitude,
+  longitude,
+  imagePath: req.file.path,
+  priorityScore,
+  category
+});
 
     res.status(201).json({
-      message: "Complaint submitted successfully",
-      complaintId: complaint._id
-    });
+  message: "Complaint submitted successfully",
+  complaint
+});
   } catch (error) {
     res.status(500).json({ message: "Failed to submit complaint" });
   }
