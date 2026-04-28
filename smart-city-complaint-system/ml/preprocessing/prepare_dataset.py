@@ -16,6 +16,7 @@ df = df[
         "Latitude",
         "Longitude",
         "Created Date",
+        "Closed Date"
     ]
 ]
 
@@ -27,6 +28,7 @@ df = df.rename(
         "Latitude": "lat",
         "Longitude": "lon",
         "Created Date": "timestamp",
+        "Closed Date" : "closed_date"
     }
 )
 
