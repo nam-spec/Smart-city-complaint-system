@@ -23,14 +23,16 @@ exports.createComplaint = async (req, res) => {
     let severityScore = 0.50; // fallback
 
     try {
-      const mlResponse = await axios.post(
-        process.env.ML_SERVICE_URL || "http://localhost:5001/predict",
-        { text: description }
-      );
+      const baseUrl = process.env.ML_SERVICE_URL || "http://localhost:5001/predict";
+      const targetUrl = baseUrl.endsWith("/predict") ? baseUrl : `${baseUrl}/predict`;
+      
+      console.log(`Sending ML prediction request to: ${targetUrl}`);
+      const mlResponse = await axios.post(targetUrl, { text: description });
 
       category = mlResponse.data.category || "unclassified";
       severityScore = parseFloat(mlResponse.data.severity_score) || 0.50;
     } catch (error) {
+      console.error("ML service error:", error.message);
       console.log("ML service unavailable, using default category and severity");
     }
 
