@@ -74,6 +74,16 @@ def calculate_severity_tfidf(text):
         # Fallback to base category severity if tfidf fit fails (e.g. empty description)
         return 0.50
 
+@app.route("/", methods=["GET"])
+def index():
+    return jsonify({
+        "status": "ML API is running",
+        "model": "Trained on real 311 dataset",
+        "endpoints": {
+            "/predict": "POST (predicts category & severity)"
+        }
+    })
+
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
