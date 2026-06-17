@@ -29,7 +29,7 @@ router.get(
   getAverageResolutionTime
 );
 
-const { getHotspots } = require("../controllers/analyticsController");
+const { getHotspots, getMLMetrics, getMLExplainability } = require("../controllers/analyticsController");
 
 router.get(
   "/hotspots",
@@ -38,5 +38,18 @@ router.get(
   getHotspots
 );
 
+router.get(
+  "/ml-metrics",
+  protect,
+  authorize("admin"),
+  getMLMetrics
+);
+
+router.get(
+  "/ml-explainability",
+  protect,
+  authorize("admin"),
+  getMLExplainability
+);
 
 module.exports = router;

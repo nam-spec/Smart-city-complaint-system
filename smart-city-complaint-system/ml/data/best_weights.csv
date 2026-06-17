@@ -1,0 +1,2 @@
+stage1_alpha,stage1_beta,stage1_gamma,stage1_delta,stage1_cv_f1,stage1_cv_f1_std,stage2_alpha,stage2_beta,stage2_gamma,stage2_val_ndcg
+0.0,0.29,0.4,0.31,0.13240706206766217,0.023539542665677732,0.76,0.18,0.06,0.9642106606650488

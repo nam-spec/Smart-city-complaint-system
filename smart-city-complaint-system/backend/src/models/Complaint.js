@@ -31,7 +31,27 @@ const complaintSchema = new mongoose.Schema(
 
     imagePath: {
       type: String,
-      required: true
+      required: false
+    },
+
+    severityScore: {
+      type: Number,
+      default: 0
+    },
+
+    spatialDensity: {
+      type: Number,
+      default: 0
+    },
+
+    temporalDensity: {
+      type: Number,
+      default: 0
+    },
+
+    acceleration: {
+      type: Number,
+      default: 0
     },
 
     priorityScore: {
@@ -39,9 +59,19 @@ const complaintSchema = new mongoose.Schema(
       default: 0
     },
 
+    priorityScoreS2: {
+      type: Number,
+      default: 0
+    },
+
+    isSeeded: {
+      type: Boolean,
+      default: false
+    },
+
     resolvedAt: {
-  type: Date
-},
+      type: Date
+    },
 
     status: {
       type: String,

@@ -7,9 +7,28 @@ __pycache__/
 *.pyc
 
 # ML data (IMPORTANT)
-ml/data/
-*.csv
-*.pkl
+# Ignore raw large datasets and intermediate pipeline outputs
+ml/data/311_Service_Requests_from_2020_to_Present_20260319.csv
+ml/data/complaints_clean.csv
+ml/data/complaints_with_severity.csv
+ml/data/complaints_with_density.csv
+ml/data/complaints_with_temporal.csv
+ml/data/complaints_with_growth.csv
+ml/data/complaints_with_acceleration.csv
+ml/data/weight_ablation_stage1.csv
+ml/data/weight_ablation_stage2.csv
+ml/data/weight_ablation.csv
+ml/data/window_level_stats.csv
+ml/data/external_gt_resolution.csv
+
+# Track essential diagnostics datasets and models (all under 2MB)
+!ml/data/final_priority_dataset.csv
+!ml/data/evaluation_results.csv
+!ml/data/explainability_table.csv
+!ml/data/*.png
+!ml/model/*.pkl
+!ml/model/model.pkl
+!ml/model/vectorizer.pkl
 
 # Env
 .env

@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Home from "./pages/Home";
 import AdminDashboard from "./pages/AdminDashboard";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -9,6 +10,7 @@ import AdminLayout from "./components/AdminLayout";
 import ComplaintMap from "./pages/ComplaintMap";
 import AdminComplaints from "./pages/AdminComplaints";
 import AdminHotspots from "./pages/AdminHotspots";
+import AdminDiagnostics from "./pages/AdminDiagnostics";
 
 function App() {
   const location = useLocation();
@@ -16,10 +18,11 @@ function App() {
 
   return (
     <>
-      {!isAdminPage && location.pathname !== "/login" && <Navbar />}
+      {!isAdminPage && location.pathname !== "/login" && location.pathname !== "/register" && <Navbar />}
 
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         <Route
           path="/"
@@ -78,6 +81,17 @@ function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminLayout>
                 <AdminHotspots />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/diagnostics"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminLayout>
+                <AdminDiagnostics />
               </AdminLayout>
             </ProtectedRoute>
           }

@@ -1,4 +1,24 @@
 const Complaint = require("../models/Complaint");
+const fs = require("fs");
+const path = require("path");
+
+const parseCSV = (filePath) => {
+  if (!fs.existsSync(filePath)) return [];
+  const data = fs.readFileSync(filePath, "utf8");
+  const lines = data.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+  if (lines.length === 0) return [];
+  const headers = lines[0].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(h => h.replace(/^"|"$/g, ''));
+  const result = [];
+  for (let i = 1; i < lines.length; i++) {
+    const parts = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(p => p.replace(/^"|"$/g, ''));
+    const obj = {};
+    headers.forEach((h, index) => {
+      obj[h] = parts[index] || "";
+    });
+    result.push(obj);
+  }
+  return result;
+};
 
 exports.getBasicStats = async (req, res) => {
   try {
@@ -102,5 +122,28 @@ exports.getHotspots = async (req, res) => {
 
   } catch (error) {
     res.status(500).json({ message: "Failed to fetch hotspots" });
+  }
+};
+
+exports.getMLMetrics = async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, "../../../ml/data/evaluation_results.csv");
+    const metrics = parseCSV(filePath);
+    res.status(200).json(metrics);
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch ML metrics" });
+  }
+};
+
+exports.getMLExplainability = async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, "../../../ml/data/explainability_table.csv");
+    const explainability = parseCSV(filePath);
+    // Limit to top 50 to keep payload lightweight
+    res.status(200).json(explainability.slice(0, 50));
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Failed to fetch ML explainability data" });
   }
 };

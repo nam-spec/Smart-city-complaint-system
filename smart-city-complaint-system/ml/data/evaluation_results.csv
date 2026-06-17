@@ -1,0 +1,7 @@
+Model,NDCG_mean,NDCG_std,p_value
+STSEP Stage-2 (Proposed),0.9546,0.0096,—
+Semantic Only,0.8376,0.0143,0.0156
+Spatial Only,0.8116,0.0352,0.0156
+Temporal Only,0.7292,0.0219,0.0156
+No-Surge Model,0.9001,0.0211,0.0156
+ST-DBSCAN,0.7703,0.0173,0.0156

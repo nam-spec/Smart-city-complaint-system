@@ -19,40 +19,54 @@ exports.createComplaint = async (req, res) => {
       });
     }
 
-  let category = "Unclassified";
+    let category = "unclassified";
+    let severityScore = 0.50; // fallback
 
-try {
-  const mlResponse = await axios.post(
-    process.env.ML_SERVICE_URL || "http://localhost:5001/predict",
-    { text: description }
-  );
+    try {
+      const mlResponse = await axios.post(
+        process.env.ML_SERVICE_URL || "http://localhost:5001/predict",
+        { text: description }
+      );
 
-  category = mlResponse.data.category;
-} catch (error) {
-  console.log("ML service unavailable, using default category");
-}
+      category = mlResponse.data.category || "unclassified";
+      severityScore = parseFloat(mlResponse.data.severity_score) || 0.50;
+    } catch (error) {
+      console.log("ML service unavailable, using default category and severity");
+    }
 
-    const priorityScore = await calculatePriority(
-  description,
-  parseFloat(latitude),
-  parseFloat(longitude),
-   category
-);
-   const complaint = await Complaint.create({
-  citizen: req.user._id,
-  description,
-  category,
-  latitude: parseFloat(latitude),
-  longitude: parseFloat(longitude),
-  imagePath: req.file.path,
-  priorityScore
-});
+    const {
+      priorityScore,
+      priorityScoreS2,
+      spatialDensity,
+      temporalDensity,
+      acceleration
+    } = await calculatePriority(
+      severityScore,
+      parseFloat(latitude),
+      parseFloat(longitude)
+    );
+
+    const complaint = await Complaint.create({
+      citizen: req.user._id,
+      description,
+      category,
+      latitude: parseFloat(latitude),
+      longitude: parseFloat(longitude),
+      imagePath: req.file.path,
+      severityScore,
+      spatialDensity,
+      temporalDensity,
+      acceleration,
+      priorityScore,
+      priorityScoreS2
+    });
 
     res.status(201).json({
-  message: "Complaint submitted successfully",
-  complaint
-});
+      message: "Complaint submitted successfully",
+      complaint
+    });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ message: "Failed to submit complaint" });
   }
 };
