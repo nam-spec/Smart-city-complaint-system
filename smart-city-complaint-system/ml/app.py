@@ -98,7 +98,27 @@ def predict():
         if model and vectorizer:
             try:
                 X = vectorizer.transform([text])
-                category = str(model.predict(X)[0])
+                if X.nnz > 0:
+                    category = str(model.predict(X)[0])
+                else:
+                    # Keyword heuristic fallback if input text has no matching TF-IDF features
+                    lower_txt = text.lower()
+                    if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse"]):
+                        category = "electric"
+                    elif any(w in lower_txt for w in ["water", "leak", "pipe", "flood", "sewage", "drain", "tap", "drinking"]):
+                        category = "water"
+                    elif any(w in lower_txt for w in ["garbage", "trash", "sanitation", "waste", "dustbin", "dump", "debris"]):
+                        category = "sanitation"
+                    elif any(w in lower_txt for w in ["pothole", "road", "street", "asphalt", "manhole", "sidewalk", "pavement"]):
+                        category = "road"
+                    elif any(w in lower_txt for w in ["traffic", "park", "car", "vehicle", "jam", "signal", "driveway"]):
+                        category = "traffic"
+                    elif any(w in lower_txt for w in ["noise", "loud", "music", "party", "speaker", "honking"]):
+                        category = "noise"
+                    elif any(w in lower_txt for w in ["wall", "door", "window", "crack", "plaster", "building", "balcony", "housing"]):
+                        category = "housing"
+                    else:
+                        category = str(model.predict(X)[0])
             except Exception as e:
                 print(f"Error predicting category: {e}")
         else:
