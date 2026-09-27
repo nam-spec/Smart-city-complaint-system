@@ -54,7 +54,7 @@ def predict_complaint(text):
     else:
         # Keyword heuristic fallback for completely unknown words
         lower_txt = text.lower()
-        if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse"]):
+        if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse", "fire", "smoke", "blaze"]):
             pred_cat = "electric"
         elif any(w in lower_txt for w in ["water", "leak", "pipe", "flood", "sewage", "drain", "tap", "drinking"]):
             pred_cat = "water"

@@ -103,7 +103,7 @@ def predict():
                 else:
                     # Keyword heuristic fallback if input text has no matching TF-IDF features
                     lower_txt = text.lower()
-                    if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse"]):
+                    if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse", "fire", "smoke", "blaze"]):
                         category = "electric"
                     elif any(w in lower_txt for w in ["water", "leak", "pipe", "flood", "sewage", "drain", "tap", "drinking"]):
                         category = "water"

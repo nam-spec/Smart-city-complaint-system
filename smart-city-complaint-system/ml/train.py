@@ -49,7 +49,15 @@ domain_corpus = {
         "feeder pillar damaged open wires shock risk",
         "live wire hanging low over walkway",
         "streetlights off at night dangerous for vehicles",
-        "short circuit in main electrical box"
+        "short circuit in main electrical box",
+        "fire outbreak in building emergency smoke and flames",
+        "fire accident shop caught fire blaze",
+        "fire hazard sparks and flames spreading",
+        "fire explosion cylinder blast emergency",
+        "fire in electric transformer short circuit blaze",
+        "fire emergency call fire brigade",
+        "fire smoke burning hazard",
+        "fire"
     ],
     "water": [
         "water main pipe burst flooding the street",
