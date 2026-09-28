@@ -1,160 +1,131 @@
-from flask import Flask, request, jsonify
-import joblib
-import numpy as np
 import os
+import re
+import numpy as np
+import joblib
+from flask import Flask, request, jsonify
+from keywords import keyword_scores
 
 app = Flask(__name__)
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PIPE_PATH = os.path.join(BASE_DIR, "model", "pipeline.pkl")
 
-# Load category classifier
-MODEL_PATH = "model/model.pkl"
-VEC_PATH = "model/vectorizer.pkl"
+pipeline = joblib.load(PIPE_PATH) if os.path.exists(PIPE_PATH) else None
+CLASSES = list(pipeline.classes_) if pipeline is not None else []
+print("Loaded classifier." if pipeline is not None else "WARNING: model missing. Run train.py first.")
 
-if os.path.exists(MODEL_PATH) and os.path.exists(VEC_PATH):
-    model = joblib.load(MODEL_PATH)
-    vectorizer = joblib.load(VEC_PATH)
-    print("Loaded category classification model.")
-else:
-    model = None
-    vectorizer = None
-    print("WARNING: Classification model not found. Call train.py first.")
+# ---- Tunables -------------------------------------------------------------
+KEYWORD_WEIGHT = 0.25        # max share the keyword prior can contribute (additive, bounded)
+MIN_CONFIDENCE = 0.20        # below this -> "unclassified"
+# ---------------------------------------------------------------------------
 
-# Severity Anchors definition
-SEVERITY_ANCHORS = {
-    1.0:  "electrical fire power outage dangerous emergency sparks explosion",
-    0.85: "severe water leak flooding no hot water pipe burst overflow",
-    0.75: "traffic accident blocked road signal broken vehicle crash",
-    0.70: "road pothole damaged street condition hazard",
-    0.65: "garbage overflow sanitation issue large waste bulky items",
-    0.60: "housing door window paint structural damage",
-    0.40: "noise complaint loud music party disturbance",
+# Severity: each category has a base score + an anchor sentence for semantic matching
+SEVERITY = {
+    "fire":             (1.00, "fire outbreak explosion blaze smoke flames trapped emergency"),
+    "gas":              (0.95, "gas leak cylinder blast toxic fumes explosion hazard evacuation"),
+    "electric":         (0.80, "live wire sparking transformer blast power outage blackout shock hazard"),
+    "water":            (0.65, "water pipe burst no drinking water contaminated supply failure"),
+    "drainage":         (0.70, "sewage overflow flooding blocked drain waterlogging"),
+    "public_safety":    (0.85, "theft chain snatching harassment crime unsafe violence"),
+    "health":           (0.80, "disease outbreak dengue malaria no doctor ambulance hospital"),
+    "road":             (0.70, "pothole open manhole sinkhole broken road accident hazard"),
+    "traffic":          (0.60, "traffic signal broken jam illegal parking blocked road"),
+    "pollution":        (0.65, "toxic smoke chemical discharge air pollution effluent"),
+    "animals":          (0.60, "stray dogs attacking bite cattle on road snake"),
+    "sanitation":       (0.55, "garbage not collected overflowing waste stench carcass"),
+    "housing":          (0.60, "wall cracks ceiling falling balcony loose unsafe building"),
+    "environment":      (0.45, "fallen tree branch bushes park garden maintenance"),
+    "public_transport": (0.40, "bus delayed bus stop broken metro escalator not working"),
+    "encroachment":     (0.40, "illegal encroachment hawkers unauthorized construction footpath"),
+    "noise":            (0.35, "loud music noise loudspeaker late night disturbance"),
 }
-anchor_texts = list(SEVERITY_ANCHORS.values())
-anchor_scores = np.array(list(SEVERITY_ANCHORS.keys()))
+URGENCY_WORDS = ["emergency", "urgent", "trapped", "injured", "explosion", "collapse", "immediately",
+                 "life", "dangerous", "children", "died", "accident", "fatal"]
 
-# Load Sentence Transformer model (Embedding-based severity)
-encoder = None
+# Optional semantic encoder (falls back gracefully)
+encoder, anchor_embeds = None, None
 try:
     from sentence_transformers import SentenceTransformer
-    print("Sentence Transformers found. Loading MiniLM encoder...")
     encoder = SentenceTransformer("all-MiniLM-L6-v2")
-    # Pre-encode anchors
-    anchor_embeds = encoder.encode(anchor_texts, show_progress_bar=False)
-    print("MiniLM encoder loaded successfully.")
+    anchor_embeds = encoder.encode([v[1] for v in SEVERITY.values()], show_progress_bar=False)
+    print("MiniLM encoder loaded.")
 except Exception as e:
-    print(f"INFO: Sentence Transformers fallback to TF-IDF Cosine Similarity. Reason: {e}")
+    print(f"INFO: encoder unavailable, severity uses category prior only. Reason: {e}")
 
-def softmax(x, axis=-1):
-    e = np.exp(x - x.max(axis=axis, keepdims=True))
-    return e / e.sum(axis=axis, keepdims=True)
 
-def calculate_severity_embedding(text):
-    """Calculate severity using sentence embeddings and softmax similarities."""
-    query_embed = encoder.encode([text], show_progress_bar=False)
-    # Cosine similarity between query and all anchors
-    from sklearn.metrics.pairwise import cosine_similarity
-    sims = cosine_similarity(query_embed, anchor_embeds)  # shape (1, 7)
-    weights = softmax(sims * 5)  # temperature = 5
-    score = float((weights * anchor_scores).sum())
-    return np.clip(score, 0.35, 1.0)
+def softmax(x):
+    e = np.exp(x - x.max())
+    return e / e.sum()
 
-def calculate_severity_tfidf(text):
-    """Lightweight fallback using TF-IDF and cosine similarity for severity."""
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.metrics.pairwise import cosine_similarity
-    
-    temp_vec = TfidfVectorizer(stop_words="english")
-    all_texts = [text] + anchor_texts
-    try:
-        tfidf_mat = temp_vec.fit_transform(all_texts)
-        sims = cosine_similarity(tfidf_mat[0:1], tfidf_mat[1:])  # shape (1, 7)
-        weights = softmax(sims * 5)
-        score = float((weights * anchor_scores).sum())
-        return np.clip(score, 0.35, 1.0)
-    except Exception:
-        # Fallback to base category severity if tfidf fit fails (e.g. empty description)
-        return 0.50
+
+def classify(text):
+    """ML probabilities + bounded keyword prior. Returns (category, confidence, top3)."""
+    X_has_vocab = bool(re.search(r"[a-zA-Z]{2,}", text))
+    if not X_has_vocab:
+        return "unclassified", 0.0, []
+
+    ml = pipeline.predict_proba([text])[0]
+    kw = keyword_scores(text, CLASSES)                 # sums to 1, or zeros if no hit
+    blend = (1 - KEYWORD_WEIGHT) * ml + KEYWORD_WEIGHT * kw if kw.sum() > 0 else ml
+    blend = blend / blend.sum()
+
+    order = np.argsort(blend)[::-1]
+    top3 = [{"category": CLASSES[i], "score": round(float(blend[i]), 4)} for i in order[:3]]
+    best = order[0]
+    if blend[best] < MIN_CONFIDENCE:
+        return "unclassified", float(blend[best]), top3
+    return CLASSES[best], float(blend[best]), top3
+
+
+def severity_for(text, category):
+    lower = text.lower()
+    base = SEVERITY[category][0] if category in SEVERITY else None
+    semantic = None
+    if encoder is not None:
+        try:
+            from sklearn.metrics.pairwise import cosine_similarity
+            sims = cosine_similarity(encoder.encode([text], show_progress_bar=False), anchor_embeds)[0]
+            scores = np.array([v[0] for v in SEVERITY.values()])
+            semantic = float((softmax(sims * 8) * scores).sum())
+        except Exception as e:
+            print(f"Embedding severity failed: {e}")
+
+    if base is not None and semantic is not None:
+        score = 0.6 * base + 0.4 * semantic
+    else:
+        score = base if base is not None else (semantic if semantic is not None else 0.5)
+
+    score += 0.03 * min(3, sum(w in lower for w in URGENCY_WORDS))
+    return float(np.clip(score, 0.3, 1.0))
+
 
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({
         "status": "ML API is running",
-        "model": "Trained on real 311 dataset",
-        "endpoints": {
-            "/predict": "POST (predicts category & severity)"
-        }
+        "categories": CLASSES,
+        "endpoints": {"/predict": "POST {'text': '...'} -> category, confidence, severity_score"},
     })
+
 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.json or {}
-        text = data.get("text")
-
+        if pipeline is None:
+            return jsonify({"error": "Model not trained. Run train.py first."}), 503
+        text = ((request.json or {}).get("text") or "").strip()
         if not text:
             return jsonify({"error": "Text is required"}), 400
 
-        # 1. Predict Category
-        category = "unclassified"
-        if model and vectorizer:
-            try:
-                X = vectorizer.transform([text])
-                if X.nnz > 0:
-                    category = str(model.predict(X)[0])
-                else:
-                    # Keyword heuristic fallback if input text has no matching TF-IDF features
-                    lower_txt = text.lower()
-                    if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse", "fire", "smoke", "blaze"]):
-                        category = "electric"
-                    elif any(w in lower_txt for w in ["water", "leak", "pipe", "flood", "sewage", "drain", "tap", "drinking"]):
-                        category = "water"
-                    elif any(w in lower_txt for w in ["garbage", "trash", "sanitation", "waste", "dustbin", "dump", "debris"]):
-                        category = "sanitation"
-                    elif any(w in lower_txt for w in ["pothole", "road", "street", "asphalt", "manhole", "sidewalk", "pavement"]):
-                        category = "road"
-                    elif any(w in lower_txt for w in ["traffic", "park", "car", "vehicle", "jam", "signal", "driveway"]):
-                        category = "traffic"
-                    elif any(w in lower_txt for w in ["noise", "loud", "music", "party", "speaker", "honking"]):
-                        category = "noise"
-                    elif any(w in lower_txt for w in ["wall", "door", "window", "crack", "plaster", "building", "balcony", "housing"]):
-                        category = "housing"
-                    else:
-                        category = str(model.predict(X)[0])
-            except Exception as e:
-                print(f"Error predicting category: {e}")
-        else:
-            # simple keyword match if classifier model is missing
-            lower_txt = text.lower()
-            if any(w in lower_txt for w in ["water", "leak", "pipe", "flood"]):
-                category = "water"
-            elif any(w in lower_txt for w in ["traffic", "park", "car", "vehicle"]):
-                category = "traffic"
-            elif any(w in lower_txt for w in ["noise", "loud", "music"]):
-                category = "noise"
-            elif any(w in lower_txt for w in ["garbage", "trash", "sanitation"]):
-                category = "sanitation"
-            elif any(w in lower_txt for w in ["road", "street", "pothole"]):
-                category = "road"
-            elif any(w in lower_txt for w in ["light", "electric", "power"]):
-                category = "electric"
-            elif any(w in lower_txt for w in ["door", "window", "structure"]):
-                category = "housing"
-
-        # 2. Calculate Severity Score
-        if encoder:
-            try:
-                severity_score = calculate_severity_embedding(text)
-            except Exception as e:
-                print(f"Embedding calculation failed: {e}, falling back to TF-IDF")
-                severity_score = calculate_severity_tfidf(text)
-        else:
-            severity_score = calculate_severity_tfidf(text)
-
+        category, confidence, top3 = classify(text)
         return jsonify({
             "category": category,
-            "severity_score": round(severity_score, 4)
+            "confidence": round(confidence, 4),
+            "top_predictions": top3,
+            "severity_score": round(severity_for(text, category), 4),
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(port=5001)

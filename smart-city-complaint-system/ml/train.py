@@ -1,302 +1,416 @@
 import os
-import pandas as pd
+import random
 import numpy as np
+import pandas as pd
+import joblib
+from keywords import LEXICON
+from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report
-import joblib
+from sklearn.metrics import classification_report, accuracy_score
 
-print("=" * 60)
-print("Smart City Complaint System: NLP Classifier Training")
-print("=" * 60)
+random.seed(42)
+np.random.seed(42)
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_PATH = os.path.join(BASE_DIR, "data", "complaints_with_severity.csv")
-MODEL_DIR = os.path.join(BASE_DIR, "model")
+SAMPLES_PER_CATEGORY = 500   # identical for every category -> no class overpowers
+HELD_OUT_PER_CATEGORY = 3    # complaint phrases NEVER seen in training (honest test)
 
-# 1. Real-World Domain Corpus Across ALL 7 Smart City Categories
-# This enriches the vocabulary with natural, conversational citizen complaints.
-domain_corpus = {
+# Each category: list of distinct core complaints. The LAST 3 of each are held out for testing.
+CORPUS = {
+    "fire": [
+        "fire outbreak in building with smoke and flames rising",
+        "shop caught fire blaze spreading rapidly",
+        "transformer caught fire with loud explosion and sparks",
+        "gas cylinder blast in kitchen house is burning",
+        "vehicle burning fiercely on highway",
+        "garbage dump on fire toxic smoke filling area",
+        "factory chemical storage burning need fire brigade",
+        "dense black smoke in staircase residents trapped",
+        "warehouse burning uncontrollably",
+        "flames coming out of apartment balcony",
+        "dry grass fire spreading near houses",
+        "fire emergency send fire tender immediately",
+        "smoke pouring out of basement parking",
+        "godown ablaze firefighters needed",
+    ],
+    "gas": [
+        "strong gas leakage smell from underground pipe",
+        "lpg cylinder leaking in kitchen",
+        "pngas pipeline leak near restaurant",
+        "gas line punctured during road digging gas escaping",
+        "gas regulator hissing high pressure leak",
+        "commercial cylinder valve leaking in hotel kitchen",
+        "gas smell in building basement",
+        "industrial gas leakage evacuation required",
+        "smell of cooking gas in the whole staircase",
+        "toxic fumes causing nausea and eye irritation from factory",
+        "cng pipeline joint leaking at petrol pump",
+        "rotten egg smell of gas outside our society",
+        "gas meter leaking near my flat",
+        "suspected methane leak in the lane",
+    ],
     "electric": [
-        "power cut in our neighborhood for the past two hours",
-        "electricity outage without prior notice transformer sparks",
-        "street lights not working whole road is completely dark",
-        "high voltage fluctuation damaging home appliances",
-        "electric pole wire sparking dangerously on sidewalk",
-        "open junction box with live exposed electric wires",
-        "frequent load shedding and power supply failure",
-        "street light blinking and flickering all night",
-        "electric meter caught fire short circuit",
-        "no current in building electricity breakdown",
-        "transformer exploded loud bang no power in neighborhood",
-        "hanging electrical cables touching tree branches risk of electrocution",
-        "street light fixture broken and dark street",
-        "power supply tripped blackout in entire sector",
-        "fuse blown at electrical sub station no electricity",
-        "sparking from electric pole near school children hazard",
-        "low voltage problem lights dim fans not working",
-        "damaged electricity pillar box open to rain water",
-        "power fluctuation burning bulbs and refrigerators",
-        "power outage due to cable fault in underground line",
-        "electricity wire snapped and lying on ground",
-        "no power supply since morning power breakdown",
-        "street light dayburning wasting electricity in daytime",
-        "street lamp out dark corner unsafe for pedestrians",
-        "sparking live cable on road emergency electric hazard",
-        "electricity department pole bent leaning dangerously",
-        "feeder pillar damaged open wires shock risk",
-        "live wire hanging low over walkway",
-        "streetlights off at night dangerous for vehicles",
-        "short circuit in main electrical box",
-        "fire outbreak in building emergency smoke and flames",
-        "fire accident shop caught fire blaze",
-        "fire hazard sparks and flames spreading",
-        "fire explosion cylinder blast emergency",
-        "fire in electric transformer short circuit blaze",
-        "fire emergency call fire brigade",
-        "fire smoke burning hazard",
-        "fire"
+        "power cut in our area for three hours",
+        "electricity outage without notice",
+        "street lights not working whole road dark at night",
+        "voltage fluctuation damaging home appliances",
+        "electric pole wire sparking on sidewalk",
+        "open junction box with exposed live wires",
+        "frequent load shedding in colony",
+        "street light flickering all night",
+        "no current in building complete blackout",
+        "hanging electric cables touching tree branches",
+        "fuse blown at distribution box no electricity",
+        "low voltage lights dim and fans slow",
+        "electric meter tripping again and again",
+        "lamp post bulb fused near bus stop",
     ],
     "water": [
-        "water main pipe burst flooding the street",
-        "water leakage from underground municipal pipeline",
-        "no drinking water supply in our locality since morning",
-        "contaminated dirty brown water coming from tap with foul smell",
-        "sewage drainage overflow mixing with drinking water line",
-        "very low water pressure on upper floors no water reaching tank",
-        "water pipe broken road inundated with fresh water",
-        "continuous water leak wasting thousands of gallons of clean water",
-        "water tanker supply needed pump motor at booster station failed",
-        "storm water drain clogged flooding roads and houses",
-        "drinking water pipeline damaged during road digging",
-        "muddy contaminated water supply causing health issues",
-        "faucet and tap running dry municipal valve closed",
-        "heavy water flow leaking from main line valve",
-        "no municipal water supply for two consecutive days",
-        "underground pipe leakage creating hollow under asphalt",
-        "water gushing out of broken fire hydrant",
-        "overhead water tank overflowing continuously",
-        "water crisis in area pipeline valve stuck",
-        "stagnant clean water pool formed due to pipeline leak",
-        "water pressure very low cannot fill buckets",
-        "drainage water backing up into ground floor bathrooms",
-        "broken valve causing water loss on roadway",
-        "water supply interrupted for 24 hours"
+        "no drinking water supply since morning",
+        "main water pipeline burst flooding street",
+        "clean water leaking from municipal pipe",
+        "contaminated brown water from tap with foul smell",
+        "very low water pressure no water in tank",
+        "water tanker required pump at booster station failed",
+        "tap running dry municipal valve closed",
+        "no municipal water supply for two days",
+        "water gushing from broken fire hydrant",
+        "drinking water pipeline damaged during road work",
+        "dirty muddy tap water health risk",
+        "water supply timing irregular in our building",
+        "water meter reading wrong bill too high",
+        "water line valve stuck colony has water crisis",
+    ],
+    "drainage": [
+        "sewage overflow on the street",
+        "storm water drain clogged flooding roads",
+        "drain blocked water logging near my house",
+        "sewer line choked dirty water entering bathroom",
+        "open nala overflowing after rain",
+        "manhole overflowing with sewage water",
+        "drainage water backing up into ground floor",
+        "gutter blocked and dirty water stagnating",
+        "sewer smell and leakage from broken drain pipe",
+        "waterlogging in the underpass after light rain",
+        "chamber overflow near school sewage on road",
+        "clogged culvert causing flooding in lane",
+        "septic waste flowing on public road",
+        "rainwater not draining from society compound",
     ],
     "sanitation": [
-        "garbage dump overflowing on the main street corner",
-        "trash not collected for three days stinking badly",
-        "dead animal carcass lying on road sanitation hazard",
-        "illegal dumping of solid waste and plastic debris on vacant plot",
-        "public dustbin broken and garbage scattered by stray animals",
-        "filthy unhygienic conditions near vegetable market area",
-        "drainage canal filled with plastic waste and rotting garbage",
-        "sweeper has not cleaned the street road full of dirt and trash",
-        "rotten waste emitting unbearable foul odor and flies",
-        "construction debris and rubble dumped on pavement",
-        "overflowing dumpster near school entrance disease risk",
-        "garbage bins not emptied spilling into driveway",
-        "waste disposal vehicle skipping our lane garbage piling up",
-        "sanitary waste thrown openly public nuisance",
-        "manure and organic waste rotting on sidewalk",
-        "litter and plastic bags scattered across residential street",
-        "open dumping ground creating severe health hazard",
-        "waste pile rotting on corner attracting rodents and mosquitoes",
-        "cleaning staff not clearing street bins",
-        "smelly garbage bins left unattended"
+        "garbage overflowing at street corner stinking",
+        "trash not collected for four days",
+        "dead animal carcass lying on road",
+        "illegal dumping of waste on empty plot",
+        "public dustbin broken garbage scattered",
+        "waste accumulating near market unhygienic",
+        "sweeper has not cleaned the street",
+        "rotting waste emitting foul odor and flies",
+        "construction debris dumped on sidewalk",
+        "dumpster overflowing near school entrance",
+        "garbage truck skipping our lane",
+        "public toilet dirty and unusable",
+        "sanitary waste thrown openly on road",
+        "litter and plastic bags all over the street",
     ],
     "road": [
-        "deep pothole on main road causing accidents and flat tires",
-        "damaged broken asphalt road with loose gravel and sharp stones",
-        "open uncovered manhole on road major hazard for two wheelers",
-        "pavement and sidewalk tiles broken pedestrian safety issue",
-        "road cave in sinkhole forming in middle of street",
-        "speed breaker damaged without reflective paint causing spine injury",
-        "crater sized potholes after heavy rains road unusable",
-        "uneven road surface digging work left incomplete by contractor",
-        "collapsed curb and road divider damaging vehicle tires",
-        "street condition very bad huge bumps and ditches",
-        "manhole cover missing dangerous open drain on roadway",
-        "tar stripped away on busy junction road bumpy",
-        "asphalt collapsed around storm water drain grating",
-        "gravel loose on turn causing motorcycle skidding",
-        "pedestrian walkway encroached and broken paving slabs",
+        "deep pothole on main road causing accidents",
+        "broken asphalt with loose gravel",
+        "open uncovered manhole on road hazard for two wheelers",
+        "sinkhole forming in middle of street",
+        "speed breaker damaged and unpainted",
+        "craters on road after heavy rain",
+        "road digging left incomplete uneven surface",
+        "road divider collapsed damaging tyres",
+        "huge ditches and bumps on the street",
+        "tar peeled off at busy junction road bumpy",
+        "footpath tiles broken pedestrians tripping",
         "road surface eroded iron rods exposed",
-        "severe road depression causing vehicles to hit bottom",
-        "missing manhole lid pedestrian safety hazard",
-        "broken road divider causing accident hazard"
+        "missing manhole cover on carriageway",
+        "newly laid road already cracked and caved in",
     ],
     "traffic": [
-        "illegal parking on both sides of road blocking two lanes",
-        "traffic signal light not functioning causing huge traffic jam",
-        "abandoned derelict vehicle parked on footpath for months",
-        "blocked driveway cannot take car out of building",
-        "heavy traffic congestion due to haphazard vehicle parking",
-        "wrong side driving and traffic bottleneck near intersection",
-        "commercial delivery trucks double parked blocking bus stop",
-        "broken traffic light blinking yellow chaos at busy junction",
-        "unauthorized taxi stand encroaching carriageway",
-        "vehicles parked on zebra crossing pedestrian crossing blocked",
-        "traffic snarl due to auto rickshaws stopping in middle of road",
-        "no traffic police to manage rush hour intersection gridlock",
-        "commercial tempo blocking residential society entrance gate",
-        "illegal parking in no parking zone causing bottleneck",
-        "car parked blocking garage door",
-        "traffic lights stuck on red causing queue",
-        "bus parked across lane blocking traffic flow"
+        "illegal parking on both sides blocking two lanes",
+        "traffic signal not working causing jam",
+        "abandoned vehicle parked on footpath for months",
+        "car parked blocking my driveway",
+        "heavy congestion because of haphazard parking",
+        "wrong side driving near intersection",
+        "delivery trucks double parked blocking bus stop",
+        "signal blinking yellow chaos at junction",
+        "vehicles parked on zebra crossing",
+        "auto rickshaws stopping in middle of road jam",
+        "no traffic police at rush hour intersection gridlock",
+        "tempo blocking society gate",
+        "vehicles overspeeding in school zone",
+        "no parking zone violated daily at market",
     ],
     "noise": [
-        "loud music and party noise late at night after 11pm",
-        "loudspeakers blaring at high volume disturbing sleep and study",
-        "construction work noise with heavy drilling during midnight hours",
-        "incessant vehicle honking and modified silencer noise on road",
-        "industrial machine noise disturbing quiet residential neighborhood",
-        "pub and club playing loud bass music shaking building walls",
-        "barking dogs in neighbor property continuous loud disturbance",
-        "generator noise without acoustic enclosure running all night",
-        "commercial event using sound amplifiers without permission",
-        "late night DJ music in open ground violating noise pollution norms",
-        "banging and pounding noise from workshop at 2 AM",
-        "amplified music disturbance keeping residents awake",
-        "constant loud hammering and machinery noise",
-        "excessive honking and horn sound near hospital"
+        "loud music late at night after midnight",
+        "loudspeakers blaring disturbing sleep and study",
+        "construction drilling noise at midnight",
+        "constant honking and modified silencer noise",
+        "factory machine noise in quiet residential area",
+        "pub playing loud bass shaking walls",
+        "neighbour's dogs barking all night",
+        "generator noise running all night",
+        "event using sound amplifiers without permission",
+        "late night dj in open ground",
+        "banging noise from workshop at 2 am",
+        "wedding band playing loudly till late",
+        "loud firecrackers bursting at night",
+        "noisy party in the flat above us",
     ],
     "housing": [
-        "cracks appearing on structural walls of residential building",
-        "balcony railing loose risk of falling down to street",
-        "ceiling plaster falling down dampness and wall seepage",
-        "broken window frames and damaged entrance door in public housing",
-        "illegal structural modification on terrace weakening pillar",
-        "corroded staircase railing and broken floor tiles in building",
-        "dilapidated building wall leaning dangerously towards street",
-        "severe water seepage from ceiling damaging electrical conduits",
-        "paint and plaster peeling off due to persistent leakage",
-        "unsafe building structure foundation showing visible fissures",
-        "damaged entrance door latch broken security hazard",
-        "window glass broken cold air entering flat",
-        "water seepage in bedroom wall paint bubbling"
-    ]
+        "cracks on load bearing walls of the building",
+        "balcony railing loose risk of falling",
+        "ceiling plaster falling and dampness on walls",
+        "broken window frames and damaged door in flat",
+        "illegal modification on terrace weakening pillar",
+        "corroded staircase railing and broken tiles",
+        "building wall leaning dangerously",
+        "seepage from ceiling damaging wiring",
+        "paint and plaster peeling due to leakage",
+        "foundation showing visible fissures unsafe structure",
+        "lift in building not working for weeks",
+        "dilapidated old building may collapse in monsoon",
+        "society refuses to repair leaking roof",
+        "slab of terrace has developed cracks",
+    ],
+    "environment": [
+        "huge tree uprooted blocking main road",
+        "overgrown bushes blocking street light and view",
+        "dead heavy branch dangling over school gate",
+        "unpruned park trees touching power lines",
+        "fallen tree trunk crushed parked car",
+        "trees being cut illegally in the garden",
+        "public park neglected grass overgrown",
+        "playground equipment broken in garden",
+        "lake surface covered with weeds and hyacinth",
+        "tree cutting without permission near society",
+        "branches fell on road after storm",
+        "no maintenance of green belt along highway",
+        "garden benches broken and lights off in park",
+        "sapling plantation needed along the road",
+    ],
+    "pollution": [
+        "thick black smoke from factory chimney polluting air",
+        "burning of plastic and rubbish causing air pollution",
+        "chemical effluent discharged into river",
+        "dust from construction site covering houses",
+        "foul smelling chemical odor from industrial unit",
+        "air quality very poor breathing problem",
+        "oil spill and industrial waste in the nala",
+        "open burning of leaves choking the neighborhood",
+        "river water turned black from untreated discharge",
+        "cement plant dust making air unbreathable",
+        "fumes from illegal dye unit near homes",
+        "smog and vehicle emissions near the highway",
+        "toxic foam floating on the lake",
+        "crematorium smoke drifting into homes",
+    ],
+    "animals": [
+        "stray dogs attacking pedestrians",
+        "pack of street dogs chasing children",
+        "stray cattle sitting on the road",
+        "monkeys entering houses and snatching food",
+        "cow blocking the lane and roaming freely",
+        "snake found inside the housing society",
+        "dog bite incident need animal catcher",
+        "wild boar roaming near the colony",
+        "stray bulls fighting on the main road",
+        "pigeon droppings and dead birds in the building",
+        "stray dogs barking and biting at night",
+        "buffaloes left on public road by owners",
+        "beehive on the school building",
+        "injured stray animal needs rescue",
+    ],
+    "public_transport": [
+        "bus not arriving on time on our route",
+        "bus stop shelter broken no seating",
+        "auto rickshaw drivers refusing to go by meter",
+        "overcrowded local bus service too few buses",
+        "bus driver rash driving passengers scared",
+        "metro station escalator not working",
+        "railway station foot over bridge in poor condition",
+        "taxi overcharging and refusing passengers",
+        "no bus service to our new sector",
+        "bus conductor misbehaved with passengers",
+        "cancelled buses no information at the depot",
+        "bus stop has no route board or lighting",
+        "shuttle service stopped without notice",
+        "ticket machine at station out of order",
+    ],
+    "encroachment": [
+        "hawkers occupying footpath entirely",
+        "illegal shops built on public land",
+        "unauthorized construction on government plot",
+        "shopkeeper extended shed onto the road",
+        "encroachment on the drain path by houses",
+        "illegal hoarding put up without permission",
+        "temporary stalls blocking pedestrian walkway",
+        "builder occupying the common open space",
+        "illegal slum expansion on park land",
+        "road narrowed by unauthorised structure",
+        "fruit carts taking over entire pavement",
+        "wall built over public access lane",
+        "illegal banners and posters on public property",
+        "shop goods displayed on the footpath",
+    ],
+    "public_safety": [
+        "chain snatching incidents in our lane",
+        "group of drunk men harassing women near station",
+        "theft and burglary in the colony no patrolling",
+        "no cctv cameras in the crowded market",
+        "street is unsafe at night no police presence",
+        "gambling and drug dealing near the school",
+        "eve teasing outside college gate",
+        "suspicious people loitering around the society",
+        "vehicle theft reported repeatedly in the area",
+        "fight and violence on the street every night",
+        "women feel unsafe in the dark subway",
+        "bike thieves active in parking",
+        "street lights and police patrol needed to stop crime",
+        "illegal liquor den operating in the neighborhood",
+    ],
+    "health": [
+        "mosquito breeding in stagnant water dengue cases rising",
+        "outbreak of diarrhea in the locality",
+        "malaria cases reported need fumigation",
+        "no doctor at the government health center",
+        "medicines unavailable at the public hospital",
+        "ambulance took too long to arrive",
+        "hospital waste dumped outside clinic",
+        "food stalls selling stale unhygienic food",
+        "fogging needed against mosquitoes",
+        "rats and pests infestation in the market",
+        "vaccination camp not organised in our ward",
+        "unhygienic slaughterhouse spreading disease",
+        "primary health center dirty and understaffed",
+        "typhoid cases due to contaminated food",
+    ],
 }
 
-# 2. Augment dataset with variations
-augmented_rows = []
-for cat, texts in domain_corpus.items():
-    for t in texts:
-        augmented_rows.append({"text": t, "category_clean": cat})
-        augmented_rows.append({"text": t.upper(), "category_clean": cat})
-        augmented_rows.append({"text": f"urgent complaint: {t}", "category_clean": cat})
-        augmented_rows.append({"text": f"please resolve {t} immediately", "category_clean": cat})
-        augmented_rows.append({"text": f"municipal issue: {t}", "category_clean": cat})
+# Generic context added to ALL categories equally, so it carries no class signal.
+PREFIXES = ["", "", "", "urgent: ", "please resolve: ", "complaint: ", "citizen report: ",
+            "high priority: ", "attention needed: ", "kindly look into this: ", "sir, "]
+SUFFIXES = ["", "", "", " at main road junction", " in our residential sector", " near the school",
+            " causing severe inconvenience", " immediate action needed", " in front of my building",
+            " near the market area", " since yesterday", " for the last few days", " in our ward",
+            " near the bus stop", " please help"]
 
-df_aug = pd.DataFrame(augmented_rows)
-print(f"Generated {len(df_aug)} augmented real-world complaint samples.")
 
-# 3. Load 311 Dataset with Stratified Balanced Sampling
-if os.path.exists(DATA_PATH):
-    print(f"Loading base 311 dataset from {DATA_PATH}...")
-    df_raw = pd.read_csv(DATA_PATH).dropna(subset=["text", "category_clean"])
-    
-    # Stratified sampling: Draw equal number of samples per class
-    # to completely eliminate the prior class bias towards 'water'
-    samples_per_class = 4000
-    balanced_dfs = []
-    for cat in domain_corpus.keys():
-        cat_df = df_raw[df_raw["category_clean"] == cat]
-        n_samples = min(samples_per_class, len(cat_df))
-        if n_samples > 0:
-            balanced_dfs.append(cat_df.sample(n=n_samples, random_state=42))
-    
-    df_final = pd.concat(balanced_dfs + [df_aug] * 3, ignore_index=True)
-else:
-    print("Warning: Base dataset not found. Using augmented domain corpus.")
-    df_final = df_aug
+def typo(word):
+    if len(word) > 4 and random.random() < 0.5:
+        i = random.randrange(len(word) - 1)
+        word = word[:i] + word[i + 1] + word[i] + word[i + 2:]
+    return word
 
-print("\nBalanced Category Distribution in Training Set:")
-print(df_final["category_clean"].value_counts())
 
-# 4. Fit TF-IDF Vectorizer with Word & Bigram N-Grams
-print("\nFitting TF-IDF Vectorizer (ngram_range=(1, 2), max_features=8000)...")
-vectorizer = TfidfVectorizer(
-    ngram_range=(1, 2),
-    max_features=8000,
-    sublinear_tf=True,
-    stop_words="english"
-)
-X = vectorizer.fit_transform(df_final["text"])
-y = df_final["category_clean"]
+def augment(phrase):
+    words = phrase.split()
+    if len(words) > 5:
+        words = [w for w in words if random.random() > 0.12] or phrase.split()
+    if random.random() < 0.2:
+        words = [typo(w) for w in words]
+    text = f"{random.choice(PREFIXES)}{' '.join(words)}{random.choice(SUFFIXES)}".strip()
+    r = random.random()
+    if r < 0.05:
+        text = text.upper()
+    elif r < 0.10:
+        text = text.capitalize()
+    return text
 
-# 5. Train-Test Split & Balanced Logistic Regression Classifier
-X_train, X_test, y_train, y_test = train_test_split(
-    X, y, test_size=0.15, random_state=42, stratify=y
-)
 
-print(f"Training Logistic Regression with balanced class weights (classes: {len(np.unique(y))})...")
-model = LogisticRegression(
-    class_weight="balanced",
-    max_iter=1000,
-    solver="lbfgs",
-    C=1.5
-)
-model.fit(X_train, y_train)
+def lexicon_sample(cat):
+    """Short keyword-style complaint built from distinctive words of ONE category."""
+    words = random.sample(LEXICON[cat], k=random.randint(1, 3))
+    return augment(" ".join(words))
 
-# 6. Evaluation Report
-y_pred = model.predict(X_test)
-print("\n" + "=" * 60)
-print("Classification Evaluation Report:")
-print("=" * 60)
-print(classification_report(y_test, y_pred))
 
-# 7. Verification Test Suite on Real-World Citizen Descriptions
-test_queries = [
-    ("electricity cut in our neighborhood for 3 hours, wires hanging", "electric"),
-    ("power outage transformer burst no electricity", "electric"),
-    ("street light is not working at night, completely dark", "electric"),
-    ("water pipe broke and leaking everywhere on the road", "water"),
-    ("water main leak flooding street", "water"),
-    ("no drinking water supply in our locality since morning", "water"),
-    ("huge garbage pile not collected by municipality, stinking", "sanitation"),
-    ("dumpster overflowing with trash and plastic bags", "sanitation"),
-    ("pothole on the main road causing bike accidents", "road"),
-    ("open uncovered manhole on street hazard", "road"),
-    ("loud speakers playing music late at night", "noise"),
-    ("party noise and loud music after midnight", "noise"),
-    ("traffic jam due to illegally parked trucks", "traffic"),
-    ("blocked driveway cannot take car out", "traffic"),
-    ("building wall structural crack and plaster falling", "housing"),
-    ("broken window frame and damaged door in flat", "housing")
+def build(cat, phrases, n, lexicon_share=0.35):
+    n_lex = int(n * lexicon_share)
+    rows = [augment(random.choice(phrases)) for _ in range(n - n_lex)]
+    rows += [lexicon_sample(cat) for _ in range(n_lex)]
+    return rows
+
+
+print("=" * 70)
+print("Smart City Complaint Classifier - balanced training")
+print("=" * 70)
+
+train_rows, test_rows = [], []
+for cat, phrases in CORPUS.items():
+    train_p, test_p = phrases[:-HELD_OUT_PER_CATEGORY], phrases[-HELD_OUT_PER_CATEGORY:]
+    for t in build(cat, train_p, SAMPLES_PER_CATEGORY):
+        train_rows.append((t, cat))
+    for p in test_p:                       # held-out phrases, unaugmented + light augmentation
+        test_rows.append((p, cat))
+        for _ in range(4):
+            test_rows.append((augment(p), cat))
+
+train_df = pd.DataFrame(train_rows, columns=["text", "category"])
+test_df = pd.DataFrame(test_rows, columns=["text", "category"])
+print(f"Categories: {len(CORPUS)} | train samples: {len(train_df)} (equal per class) | test samples: {len(test_df)}")
+
+pipeline = Pipeline([
+    ("features", FeatureUnion([
+        ("word", TfidfVectorizer(ngram_range=(1, 2), sublinear_tf=True, lowercase=True)),
+        ("char", TfidfVectorizer(analyzer="char_wb", ngram_range=(3, 5), sublinear_tf=True, lowercase=True)),
+    ])),
+    ("clf", LogisticRegression(C=3.0, class_weight="balanced", max_iter=2000)),
+])
+pipeline.fit(train_df["text"], train_df["category"])
+
+pred = pipeline.predict(test_df["text"])
+print("\n" + "=" * 70)
+print("Evaluation on HELD-OUT complaint phrases (never seen in training)")
+print("=" * 70)
+print(f"Accuracy: {accuracy_score(test_df['category'], pred):.3f}\n")
+print(classification_report(test_df["category"], pred, zero_division=0))
+
+# Independent hand-written sentences (different wording from the corpus)
+CHECKS = [
+    ("there is a big fire in the market and people are running", "fire"),
+    ("smell of lpg in my house please send someone", "gas"),
+    ("we have had no electricity since last evening", "electric"),
+    ("street lamp near my house has stopped glowing", "electric"),
+    ("our tap has no water since two days", "water"),
+    ("sewer is overflowing in front of the temple", "drainage"),
+    ("garbage has not been picked up for a week", "sanitation"),
+    ("a huge pothole has formed near the signal", "road"),
+    ("cars are parked illegally and blocking the entire lane", "traffic"),
+    ("neighbours play very loud music every night", "noise"),
+    ("walls of my flat have big cracks", "housing"),
+    ("tree fell on the road after the storm", "environment"),
+    ("factory releasing black smoke making it hard to breathe", "pollution"),
+    ("street dogs are chasing kids on the way to school", "animals"),
+    ("bus on route 12 never comes on time", "public_transport"),
+    ("vendors have taken over the whole footpath", "encroachment"),
+    ("someone snatched a chain from a woman in our lane", "public_safety"),
+    ("many people have dengue because of stagnant water", "health"),
 ]
+print("=" * 70)
+print("Independent sanity checks")
+print("=" * 70)
+ok = 0
+for text, exp in CHECKS:
+    proba = pipeline.predict_proba([text])[0]
+    p = pipeline.classes_[proba.argmax()]
+    ok += p == exp
+    print(f"[{'PASS' if p == exp else 'FAIL'}] pred={p:<17} conf={proba.max():.2f} exp={exp:<17} | {text}")
+print(f"\n{ok}/{len(CHECKS)} passed")
 
-print("=" * 60)
-print("Live Verification Test on Unseen Citizen Sentences:")
-print("=" * 60)
-all_passed = True
-for q, expected in test_queries:
-    x_q = vectorizer.transform([q])
-    pred = model.predict(x_q)[0]
-    probs = model.predict_proba(x_q)[0]
-    conf = max(probs)
-    status = "PASS" if pred == expected else "FAIL"
-    if status == "FAIL":
-        all_passed = False
-    print(f"[{status}] Pred: {pred.upper():<11} (Conf: {conf:.2f}) | Exp: {expected:<11} | '{q[:50]}...'")
+# Final model: refit on ALL phrases (including the held-out ones) for deployment
+final_rows = []
+for cat, phrases in CORPUS.items():
+    final_rows += [(t, cat) for t in build(cat, phrases, SAMPLES_PER_CATEGORY)]
+final_df = pd.DataFrame(final_rows, columns=["text", "category"])
+pipeline.fit(final_df["text"], final_df["category"])
+print("\nRefit final model on all phrases.")
 
-print("=" * 60)
-if all_passed:
-    print("ALL TEST CASES PASSED WITH 100% ACCURACY!")
-print("=" * 60)
-
-# 8. Save Optimized Model & Vectorizer
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MODEL_DIR = os.path.join(BASE_DIR, "model")
 os.makedirs(MODEL_DIR, exist_ok=True)
-model_file = os.path.join(MODEL_DIR, "model.pkl")
-vec_file = os.path.join(MODEL_DIR, "vectorizer.pkl")
-
-print(f"\nSaving model to: {model_file}")
-joblib.dump(model, model_file)
-print(f"Saving vectorizer to: {vec_file}")
-joblib.dump(vectorizer, vec_file)
-
-print("\nModel and vectorizer successfully trained and serialized!")
-print(f"Model file size: {os.path.getsize(model_file):,} bytes")
-print(f"Vectorizer file size: {os.path.getsize(vec_file):,} bytes")
+joblib.dump(pipeline, os.path.join(MODEL_DIR, "pipeline.pkl"))
+print(f"\nSaved pipeline to {os.path.join(MODEL_DIR, 'pipeline.pkl')}")

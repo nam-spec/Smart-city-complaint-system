@@ -17,13 +17,15 @@ vectorizer = joblib.load(VEC_PATH)
 
 # Severity Anchors
 SEVERITY_ANCHORS = {
-    1.0:  "electrical fire power outage dangerous emergency sparks explosion",
-    0.85: "severe water leak flooding no hot water pipe burst overflow",
-    0.75: "traffic accident blocked road signal broken vehicle crash",
-    0.70: "road pothole damaged street condition hazard",
-    0.65: "garbage overflow sanitation issue large waste bulky items",
-    0.60: "housing door window paint structural damage",
-    0.40: "noise complaint loud music party disturbance",
+    1.00: "fire outbreak explosion building blaze gas leak cylinder blast dangerous emergency smoke trapped",
+    0.90: "electrical short circuit live wire sparking transformer power outage blackout high voltage hazard",
+    0.85: "severe water leak pipe burst main flooding contaminated sewage drain overflow pipeline break",
+    0.75: "traffic accident blocked road signal broken vehicle crash collision snarl gridlock",
+    0.70: "road pothole crater open manhole cave in sinkhole damaged asphalt street hazard",
+    0.65: "garbage overflow stinking waste uncollected trash carcass dumping sanitary issue",
+    0.60: "housing wall crack ceiling plaster falling building structural damage balcony loose",
+    0.50: "environment fallen tree uprooted wild bushes blocking road",
+    0.40: "noise complaint loud music party late night loudspeaker honking disturbance",
 }
 anchor_texts = list(SEVERITY_ANCHORS.values())
 anchor_scores = np.array(list(SEVERITY_ANCHORS.keys()))
@@ -41,36 +43,58 @@ def softmax(x):
     e_x = np.exp(x - np.max(x))
     return e_x / e_x.sum(axis=0)
 
+KEYWORD_MAP = {
+    "fire": ["fire", "blaze", "flames", "smoke", "burning", "explosion", "firefighting", "blast"],
+    "gas": ["gas", "lpg", "cylinder", "fumes", "methane", "propane"],
+    "electric": ["electric", "electricity", "power", "light", "voltage", "current", "transformer", "blackout", "fuse", "wire", "pole", "lighting"],
+    "water": ["water", "leak", "pipe", "burst", "flood", "flooding", "sewage", "drain", "drainage", "tap", "pipeline", "plumbing"],
+    "sanitation": ["garbage", "trash", "sanitation", "waste", "dustbin", "dump", "dumpster", "litter", "carcass", "stink", "stinking", "odor"],
+    "road": ["pothole", "road", "street", "asphalt", "manhole", "sidewalk", "pavement", "sinkhole", "curb", "tar"],
+    "traffic": ["traffic", "parking", "parked", "jam", "signal", "driveway", "car", "vehicle", "truck", "bottleneck"],
+    "noise": ["noise", "loud", "music", "party", "speaker", "honking", "drilling", "sound", "banging", "loudspeaker"],
+    "housing": ["housing", "building", "wall", "ceiling", "plaster", "balcony", "roof", "crack", "seepage", "structure"],
+    "environment": ["tree", "bushes", "branch", "uprooted", "park", "plant", "foliage"]
+}
+
 def predict_complaint(text):
     text = text.strip()
     if not text:
         return
 
-    # 1. Category Prediction
+    lower_txt = text.lower()
+    classes = list(model.classes_)
+    
+    # 1. Base ML Model Probabilities
     X = vectorizer.transform([text])
     if X.nnz > 0:
-        pred_cat = str(model.predict(X)[0])
-        probs = model.predict_proba(X)[0]
+        base_probs = model.predict_proba(X)[0].copy()
     else:
-        # Keyword heuristic fallback for completely unknown words
-        lower_txt = text.lower()
-        if any(w in lower_txt for w in ["electric", "power", "light", "pole", "wire", "voltage", "current", "transformer", "blackout", "fuse", "fire", "smoke", "blaze"]):
-            pred_cat = "electric"
-        elif any(w in lower_txt for w in ["water", "leak", "pipe", "flood", "sewage", "drain", "tap", "drinking"]):
-            pred_cat = "water"
-        elif any(w in lower_txt for w in ["garbage", "trash", "sanitation", "waste", "dustbin", "dump", "debris"]):
-            pred_cat = "sanitation"
-        elif any(w in lower_txt for w in ["pothole", "road", "street", "asphalt", "manhole", "sidewalk", "pavement"]):
-            pred_cat = "road"
-        elif any(w in lower_txt for w in ["traffic", "park", "car", "vehicle", "jam", "signal", "driveway"]):
-            pred_cat = "traffic"
-        elif any(w in lower_txt for w in ["noise", "loud", "music", "party", "speaker", "honking"]):
-            pred_cat = "noise"
-        elif any(w in lower_txt for w in ["wall", "door", "window", "crack", "plaster", "building", "balcony", "housing"]):
-            pred_cat = "housing"
-        else:
-            pred_cat = str(model.predict(X)[0])
-        probs = model.predict_proba(X)[0]
+        base_probs = np.ones(len(classes)) / len(classes)
+
+    # 2. Keyword Boosting
+    boosted_probs = base_probs.copy()
+    keyword_found = False
+    
+    for cat_idx, cat_name in enumerate(classes):
+        if cat_name in KEYWORD_MAP:
+            kw_list = KEYWORD_MAP[cat_name]
+            match_count = sum(1 for kw in kw_list if kw in lower_txt)
+            if match_count > 0:
+                keyword_found = True
+                boosted_probs[cat_idx] *= (1.0 + 4.0 * match_count)
+
+    # 3. Normalize Probabilities
+    probs = boosted_probs / boosted_probs.sum()
+    max_idx = np.argmax(probs)
+    max_prob = probs[max_idx]
+
+    # 4. Check Non-Civic / Gibberish Threshold
+    if not keyword_found and X.nnz == 0:
+        pred_cat = "unclassified"
+    elif not keyword_found and max_prob < 0.22:
+        pred_cat = "unclassified"
+    else:
+        pred_cat = classes[max_idx]
 
     # 2. Severity Calculation
     if encoder:
