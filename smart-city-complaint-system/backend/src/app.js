@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const path = require("path");
 const analyticsRoutes = require("./routes/analyticsRoutes");
+const surgeRoutes = require("./routes/surgeRoutes");
 const authRoutes = require("./routes/authRoutes");
 const testRoutes = require("./routes/testRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
@@ -18,6 +19,7 @@ app.use("/api/ml-plots", express.static(path.join(__dirname, "../../ml/data")));
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/complaints", complaintRoutes);
+app.use("/api/analytics/surges", surgeRoutes);
 app.use("/api/analytics", analyticsRoutes);
 
 app.get("/api/health",(req,res)=>{

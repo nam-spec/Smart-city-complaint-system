@@ -1,5 +1,7 @@
 const Complaint = require("../models/Complaint");
-const calculatePriority = require("../utils/priorityEngine");
+const calculatePriority = require("../utils/priorityEngine").calculatePriority;
+const { evaluateAndUpdateSurgeLifecycle } = require("../utils/surgeEngine");
+const h3 = require("h3-js");
 const axios = require("axios");
 
 exports.createComplaint = async (req, res) => {
@@ -36,6 +38,10 @@ exports.createComplaint = async (req, res) => {
       console.log("ML service unavailable, using default category and severity");
     }
 
+    const lat = parseFloat(latitude);
+    const lng = parseFloat(longitude);
+    const cellId = h3.latLngToCell(lat, lng, 8);
+
     const {
       priorityScore,
       priorityScoreS2,
@@ -44,23 +50,37 @@ exports.createComplaint = async (req, res) => {
       acceleration
     } = await calculatePriority(
       severityScore,
-      parseFloat(latitude),
-      parseFloat(longitude)
+      lat,
+      lng,
+      category
     );
+
+    // Evaluate surge & neighborhood lifecycle binding
+    const surgeInfo = await evaluateAndUpdateSurgeLifecycle({ latitude: lat, longitude: lng, category });
+    const surgeBoost = surgeInfo.surgeFlag ? 0.20 * surgeInfo.surgeStrength : 0;
+    const finalPriority = priorityScoreS2 + surgeBoost;
 
     const complaint = await Complaint.create({
       citizen: req.user._id,
       description,
       category,
-      latitude: parseFloat(latitude),
-      longitude: parseFloat(longitude),
+      cellId,
+      latitude: lat,
+      longitude: lng,
       imagePath: req.file.path,
       severityScore,
       spatialDensity,
       temporalDensity,
       acceleration,
       priorityScore,
-      priorityScoreS2
+      priorityScoreS2,
+      surgeFlag: surgeInfo.surgeFlag,
+      surgeId: surgeInfo.surgeId,
+      observedCount: surgeInfo.observedCount,
+      expectedCount: surgeInfo.expectedCount,
+      pValue: surgeInfo.pValue,
+      surgeStrength: surgeInfo.surgeStrength,
+      finalPriority
     });
 
     res.status(201).json({
@@ -75,12 +95,30 @@ exports.createComplaint = async (req, res) => {
 
 exports.getAllComplaints = async (req, res) => {
   try {
-    const complaints = await Complaint.find()
+    const rawComplaints = await Complaint.find()
       .populate("citizen", "name email")
-      .sort({ priorityScore: -1, createdAt: -1 });
+      .populate("surgeId", "status peakZ minP peakAt");
 
-    res.status(200).json(complaints);
+    // Dynamic fresh queue resolution: apply surge boost only if linked surge is currently ACTIVE
+    const formattedComplaints = rawComplaints.map(c => {
+      const doc = c.toObject();
+      const isSurgeActive = doc.surgeId && doc.surgeId.status === "active";
+      const currentBoost = isSurgeActive ? 0.20 * (doc.surgeStrength || 1.0) : 0;
+      doc.freshFinalPriority = doc.priorityScoreS2 + currentBoost;
+      return doc;
+    });
+
+    // Sort by freshFinalPriority descending, then createdAt descending
+    formattedComplaints.sort((a, b) => {
+      if (b.freshFinalPriority !== a.freshFinalPriority) {
+        return b.freshFinalPriority - a.freshFinalPriority;
+      }
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
+
+    res.status(200).json(formattedComplaints);
   } catch (error) {
+    console.error("Error fetching complaints:", error);
     res.status(500).json({ message: "Failed to fetch complaints" });
   }
 };

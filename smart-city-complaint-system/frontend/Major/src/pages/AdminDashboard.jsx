@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import {
   BarChart,
@@ -34,6 +35,7 @@ const Icons = {
   resolved: "M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z",
   pending: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
   avgtime: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+  surge: "M13 2L3 14h9l-1 8 10-12h-9l1-8z"
 };
 
 const CHART_COLORS = [
@@ -54,8 +56,11 @@ const getPriorityColor = (score) => {
 
 /* ───────────────── Components ───────────────── */
 
-const StatCard = ({ label, value, iconPath, accent }) => (
-  <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+const StatCard = ({ label, value, iconPath, accent, onClick }) => (
+  <div 
+    onClick={onClick}
+    className={`bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm relative overflow-hidden group ${onClick ? "cursor-pointer hover:border-indigo-300 transition-all" : ""}`}
+  >
     <div className="flex justify-between items-center relative z-10">
       <div>
         <p className="text-xs uppercase font-bold tracking-wider text-slate-400">{label}</p>
@@ -82,39 +87,46 @@ const SectionCard = ({ title, children }) => (
 /* ───────────────── Dashboard ───────────────── */
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
   const [stats, setStats] = useState(null);
   const [categoryData, setCategoryData] = useState([]);
   const [avgTime, setAvgTime] = useState(0);
   const [complaints, setComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [activeSurges, setActiveSurges] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [simulating, setSimulating] = useState(false);
+
+  const fetchDashboardData = async () => {
+    try {
+      const [b, c, comp, avg, surges] = await Promise.all([
+        api.get("/analytics/basic"),
+        api.get("/analytics/categories"),
+        api.get("/complaints"),
+        api.get("/analytics/avg-resolution-time"),
+        fetch("/api/analytics/surges?status=active").then(r => r.json()).catch(() => ({ surges: [] }))
+      ]);
+
+      setStats(b.data);
+      setCategoryData(c.data);
+      setComplaints(comp.data);
+      setFilteredComplaints(comp.data);
+      setAvgTime(avg.data.averageResolutionHours);
+      if (surges && surges.surges) {
+        setActiveSurges(surges.surges);
+      }
+    } catch (err) {
+      console.error("Dashboard data load error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchAll = async () => {
-      try {
-        const [b, c, comp, avg] = await Promise.all([
-          api.get("/analytics/basic"),
-          api.get("/analytics/categories"),
-          api.get("/complaints"),
-          api.get("/analytics/avg-resolution-time"),
-        ]);
-
-        setStats(b.data);
-        setCategoryData(c.data);
-        setComplaints(comp.data);
-        setFilteredComplaints(comp.data);
-        setAvgTime(avg.data.averageResolutionHours);
-      } catch (err) {
-        console.error("Dashboard data load error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAll();
+    fetchDashboardData();
   }, []);
 
   useEffect(() => {
@@ -122,7 +134,7 @@ export default function AdminDashboard() {
 
     if (searchTerm) {
       result = result.filter(c => 
-        c.description.toLowerCase().includes(searchTerm.toLowerCase())
+        (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -143,11 +155,29 @@ export default function AdminDashboard() {
         setComplaints(prev => 
           prev.map(c => c._id === id ? { ...c, status: newStatus, resolvedAt: newStatus === "Resolved" ? new Date() : null } : c)
         );
-        // Refresh counts
         api.get("/analytics/basic").then(res => setStats(res.data));
         api.get("/analytics/avg-resolution-time").then(res => setAvgTime(res.data.averageResolutionHours));
       })
       .catch(err => console.error("Error updating status:", err));
+  };
+
+  const handleSimulateSurge = async () => {
+    try {
+      setSimulating(true);
+      const res = await fetch("/api/analytics/surges/simulate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ category: "water", lat: 19.0760, lng: 72.8777 })
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchDashboardData();
+      }
+    } catch (err) {
+      console.error("Failed to simulate surge:", err);
+    } finally {
+      setSimulating(false);
+    }
   };
 
   if (loading) {
@@ -161,7 +191,6 @@ export default function AdminDashboard() {
     );
   }
 
-  // Categories list for filter
   const categories = [...new Set(complaints.map(c => c.category))];
 
   return (
@@ -173,18 +202,58 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-black text-slate-900 leading-none">Control Tower</h1>
           <p className="text-xs text-slate-400 mt-1.5">Welcome back, Admin 👋</p>
         </div>
+        <button
+          onClick={handleSimulateSurge}
+          disabled={simulating}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs shadow-md shadow-red-600/20 transition-all cursor-pointer disabled:opacity-50"
+        >
+          <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          {simulating ? "Injecting Surge..." : "🔥 Simulate Surge (Live Demo)"}
+        </button>
       </header>
 
       {/* Page Content */}
       <main className="p-8 space-y-8 animate-fade-in">
 
+        {/* Active Surges Red Banner */}
+        {activeSurges.length > 0 && (
+          <div className="p-4 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-700 text-white shadow-lg shadow-red-600/20 flex flex-col sm:flex-row items-center justify-between gap-4 animate-pulse">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">🔥</span>
+              <div>
+                <h3 className="font-extrabold text-sm uppercase tracking-wide">
+                  {activeSurges.length} Active Spatial Surge{activeSurges.length > 1 ? "s" : ""} Detected!
+                </h3>
+                <p className="text-xs text-red-100">
+                  Empirical Bayes Shrinkage engine identified statistical anomaly clusters (p &lt; 0.01).
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate("/admin/surges/history")}
+              className="px-4 py-2 rounded-xl bg-white text-red-700 font-bold text-xs hover:bg-red-50 transition-all cursor-pointer whitespace-nowrap shadow-sm"
+            >
+              View Active Surges →
+            </button>
+          </div>
+        )}
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
           <StatCard
             label="Total Grievances"
             value={stats?.total}
             iconPath={Icons.total}
             accent="bg-gradient-to-tr from-indigo-500 to-indigo-600 shadow-indigo-500/20"
+          />
+          <StatCard
+            label="Active Surges"
+            value={activeSurges.length}
+            iconPath={Icons.surge}
+            accent="bg-gradient-to-tr from-red-500 to-rose-600 shadow-red-500/20"
+            onClick={() => navigate("/admin/surges/history")}
           />
           <StatCard
             label="Resolved Complaints"
@@ -199,7 +268,7 @@ export default function AdminDashboard() {
             accent="bg-gradient-to-tr from-amber-500 to-amber-600 shadow-amber-500/20"
           />
           <StatCard
-            label="Avg Resolution Time"
+            label="Avg Resolution"
             value={`${avgTime}h`}
             iconPath={Icons.avgtime}
             accent="bg-gradient-to-tr from-violet-500 to-violet-600 shadow-violet-500/20"
@@ -301,9 +370,14 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.priorityScoreS2)}`}>
-                          {c.priorityScoreS2?.toFixed(2)}
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.finalPriority || c.priorityScoreS2)}`}>
+                          {(c.finalPriority || c.priorityScoreS2)?.toFixed(2)}
                         </span>
+                        {c.surgeFlag && (
+                          <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
+                            🔥 SURGE
+                          </span>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <select

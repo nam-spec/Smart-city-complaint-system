@@ -1,87 +1,155 @@
+const h3 = require("h3-js");
 const Complaint = require("../models/Complaint");
+const CellBaseline = require("../models/CellBaseline");
+const {
+  getHourOfWeekUTC,
+  computeZScore,
+  normalizeAnomalyZScore,
+  poissonTail
+} = require("./poissonMath");
 
-// Helper for Haversine distance in km
-function haversineDistance(lat1, lon1, lat2, lon2) {
-  const R = 6371; // Earth radius in km
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLon / 2) * Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-  return R * c;
+/**
+ * Hierarchical Empirical Bayes Shrinkage Cascade for H3 Cell Baseline Lookup
+ * Formula: λ_shrunk = (n * λ_local + k * λ_parent) / (n + k)  where k ≈ 20
+ * Fallback Chain: Cell -> Ward (H3 Res 6) -> City Average -> Default (~1 per 10 min)
+ *
+ * @param {Array<string>} cells - Array of H3 Res 8 cell IDs (7-cell neighborhood)
+ * @param {string} category - Complaint category
+ * @param {Date} date - Evaluation timestamp (defaults to now)
+ * @param {number} k - Shrinkage prior pseudo-observation weight (default 20)
+ * @returns {Promise<number>} Expected 10-minute baseline count across the neighborhood
+ */
+async function getShrunkBaseline(cells, category, date = new Date(), k = 20) {
+  const hourOfWeek = getHourOfWeekUTC(date);
+  const cat = (category || "unclassified").toLowerCase();
+
+  // Level 0: Global Default Baseline (approx 1.0 per 10 min across 7-cell neighborhood => 6.0 / 7 per cell hourly)
+  const defaultHourly = 6.0 / (cells.length || 7);
+
+  // Level 1: City Average Baseline (shrunk towards default)
+  let cityShrunkHourly = defaultHourly;
+  const cityBaselines = await CellBaseline.find({
+    hourOfWeek,
+    category: cat
+  }).select("meanCount totalCount nWeeks");
+
+  if (cityBaselines.length > 0) {
+    const nCity = cityBaselines.reduce((acc, b) => acc + (b.totalCount || (b.meanCount * (b.nWeeks || 6))), 0);
+    const cityRawMean = cityBaselines.reduce((acc, b) => acc + b.meanCount, 0) / cityBaselines.length;
+    cityShrunkHourly = (nCity * cityRawMean + k * defaultHourly) / (nCity + k);
+  }
+
+  // Level 2: Cache Ward Level Baseline (shrunk towards city baseline)
+  const wardCache = new Map();
+  const getWardShrunkHourly = async (parentWardId) => {
+    if (wardCache.has(parentWardId)) {
+      return wardCache.get(parentWardId);
+    }
+
+    const wardBaselines = await CellBaseline.find({
+      parentWardId,
+      hourOfWeek,
+      category: cat
+    }).select("meanCount totalCount nWeeks");
+
+    let wardShrunkHourly = cityShrunkHourly;
+    if (wardBaselines.length > 0) {
+      const nWard = wardBaselines.reduce((acc, b) => acc + (b.totalCount || (b.meanCount * (b.nWeeks || 6))), 0);
+      const wardRawMean = wardBaselines.reduce((acc, b) => acc + b.meanCount, 0) / wardBaselines.length;
+      wardShrunkHourly = (nWard * wardRawMean + k * cityShrunkHourly) / (nWard + k);
+    }
+
+    wardCache.set(parentWardId, wardShrunkHourly);
+    return wardShrunkHourly;
+  };
+
+  // Level 3: Cell Level Baseline (shrunk towards ward baseline)
+  let totalExpectedHourly = 0;
+
+  for (const cell of cells) {
+    const parentWardId = h3.cellToParent(cell, 6);
+    const wardShrunkHourly = await getWardShrunkHourly(parentWardId);
+
+    const cellBaseline = await CellBaseline.findOne({
+      cellId: cell,
+      hourOfWeek,
+      category: cat
+    }).select("meanCount totalCount nWeeks");
+
+    let cellShrunkHourly = wardShrunkHourly;
+    if (cellBaseline) {
+      const nCell = cellBaseline.totalCount || (cellBaseline.meanCount * (cellBaseline.nWeeks || 6));
+      const cellRawMean = cellBaseline.meanCount;
+      cellShrunkHourly = (nCell * cellRawMean + k * wardShrunkHourly) / (nCell + k);
+    }
+
+    totalExpectedHourly += cellShrunkHourly;
+  }
+
+  // Convert hourly expected sum to 10-minute window expected baseline
+  const expected10min = totalExpectedHourly / 6;
+  return Math.max(expected10min, 0.1);
 }
 
+/**
+ * Core Priority Engine (STSEP Engine) with H3 Grid Cells & Poisson Anomaly Z-Scores
+ */
 const calculatePriority = async (
   severityScore,
   latitude,
-  longitude
+  longitude,
+  category = "unclassified"
 ) => {
   const now = new Date();
 
-  // 1️⃣ Spatial Density (within 500m / 0.5km)
-  // To keep database query fast, use a bounding box filter first (+/- 0.005 degrees ~ 550m)
-  const latMin = latitude - 0.005;
-  const latMax = latitude + 0.005;
-  const lonMin = longitude - 0.005;
-  const lonMax = longitude + 0.005;
+  // 1️⃣ H3 Spatial Indexing & 7-Cell Neighborhood (`gridDisk`)
+  const centerCell = h3.latLngToCell(latitude, longitude, 8);
+  const cells = h3.gridDisk(centerCell, 1); // 7 H3 Resolution 8 cells (~500m radius cluster)
 
-  const candidateComplaints = await Complaint.find({
-    latitude: { $gte: latMin, $lte: latMax },
-    longitude: { $gte: lonMin, $lte: lonMax }
-  });
-
-  let spatialDensity = 0;
-  candidateComplaints.forEach(c => {
-    const dist = haversineDistance(latitude, longitude, c.latitude, c.longitude);
-    if (dist <= 0.5) {
-      spatialDensity++;
-    }
-  });
-
-  // 2️⃣ Temporal Density (number of complaints in the last 10 minutes sliding window)
+  // Observed complaints in the last 10 minutes across the 7 cells
   const tenMinutesAgo = new Date(now.getTime() - 10 * 60 * 1000);
+  const observed = await Complaint.countDocuments({
+    cellId: { $in: cells },
+    createdAt: { $gte: tenMinutesAgo }
+  });
+
+  // Expected 10-minute baseline via Shrinkage Fallback Cascade
+  const expected = await getShrunkBaseline(cells, category, now);
+
+  // Poisson Z-Score & Normalized Anomaly Score
+  const z = computeZScore(observed, expected);
+  const spatial_norm = normalizeAnomalyZScore(z);
+  const pTail = poissonTail(observed, expected);
+
+  // 2️⃣ Temporal Density (System-wide 10-minute sliding window)
   const temporalDensity = await Complaint.countDocuments({
     createdAt: { $gte: tenMinutesAgo }
   });
 
   // 3️⃣ Growth Rate & Acceleration
-  // Define 10-minute intervals from start of current hour block
   const currentWindowStart = new Date(Math.floor(now.getTime() / (10 * 60 * 1000)) * (10 * 60 * 1000));
   const prevWindowStart = new Date(currentWindowStart.getTime() - 10 * 60 * 1000);
   const prevPrevWindowStart = new Date(prevWindowStart.getTime() - 10 * 60 * 1000);
 
-  // λ_t (current window)
   const lambda_t = await Complaint.countDocuments({
     createdAt: { $gte: currentWindowStart }
   });
 
-  // λ_prev (previous window)
   const lambda_prev1 = await Complaint.countDocuments({
     createdAt: { $gte: prevWindowStart, $lt: currentWindowStart }
   });
 
-  // λ_prev2 (window before previous)
   const lambda_prev2 = await Complaint.countDocuments({
     createdAt: { $gte: prevPrevWindowStart, $lt: prevWindowStart }
   });
 
-  // Log growth rates
   const growth_rate = Math.log((lambda_t + 1) / (lambda_prev1 + 1));
   const growth_prev = Math.log((lambda_prev1 + 1) / (lambda_prev2 + 1));
-
-  // Acceleration
   const acceleration = growth_rate - growth_prev;
 
-  // 4️⃣ Normalization to [0, 1]
-  // severityScore is between 0.35 and 1.0
+  // 4️⃣ Normalization
   const severity_norm = Math.min(Math.max((severityScore - 0.35) / (1.0 - 0.35), 0), 1);
-  // Assume a max practical spatial density of 50 in 500m
-  const spatial_norm = Math.min(spatialDensity / 50, 1);
-  // Assume a max practical temporal density of 20 complaints in 10 minutes
   const temporal_norm = Math.min(temporalDensity / 20, 1);
-  // Map acceleration range [-3.0, 3.0] to [0, 1]
   const acceleration_norm = Math.min(Math.max((acceleration + 3) / 6, 0), 1);
 
   // 5️⃣ Stage-1 optimized weights: α1=0.0, β1=0.29, γ1=0.40, δ1=0.31
@@ -100,12 +168,21 @@ const calculatePriority = async (
   );
 
   return {
-    priorityScore: Math.round(priorityScore * 100) / 100, // 2 decimal precision
+    cellId: centerCell,
+    observedCount: observed,
+    expectedCount: Math.round(expected * 1000) / 1000,
+    zScore: Math.round(z * 100) / 100,
+    poissonPTail: Math.round(pTail * 10000) / 10000,
+    priorityScore: Math.round(priorityScore * 100) / 100,
     priorityScoreS2: Math.round(priorityScoreS2 * 100) / 100,
-    spatialDensity,
+    spatialDensity: observed,
+    spatialAnomalyNorm: spatial_norm,
     temporalDensity,
     acceleration
   };
 };
 
-module.exports = calculatePriority;
+module.exports = {
+  calculatePriority,
+  getShrunkBaseline
+};

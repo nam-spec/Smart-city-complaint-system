@@ -1,4 +1,4 @@
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import { useEffect, useState } from "react";
 import api, { BACKEND_URL } from "../api/axios";
 import "leaflet/dist/leaflet.css";
@@ -24,12 +24,20 @@ const createCustomMarker = (score) => {
 
 function ComplaintMap() {
   const [complaints, setComplaints] = useState([]);
+  const [surges, setSurges] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get("/complaints")
-      .then((res) => setComplaints(res.data))
+    Promise.all([
+      api.get("/complaints"),
+      fetch("/api/analytics/surges").then(res => res.json()).catch(() => ({ surges: [] }))
+    ])
+      .then(([compRes, surgeRes]) => {
+        setComplaints(compRes.data);
+        if (surgeRes && surgeRes.surges) {
+          setSurges(surgeRes.surges);
+        }
+      })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
   }, []);
@@ -52,11 +60,12 @@ function ComplaintMap() {
       <header className="bg-white border-b border-slate-200/80 px-8 py-5 flex justify-between items-center z-10">
         <div>
           <h1 className="text-2xl font-black text-slate-900 leading-none">Spatial Analytics Map</h1>
-          <p className="text-xs text-slate-400 mt-1.5">Interactive geo-spatial visualization of registered city complaints colored by STSEP priority score.</p>
+          <p className="text-xs text-slate-400 mt-1.5">Interactive geo-spatial visualization of registered city complaints and live spatial surges.</p>
         </div>
         
         {/* Priority Legend */}
         <div className="flex items-center gap-4 bg-slate-50 border border-slate-200/50 px-4 py-2 rounded-xl text-[10px] uppercase font-bold tracking-wider text-slate-500">
+          <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-full bg-red-500 animate-ping"></span> Active Surge</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-red-500"></span> Critical (≥0.75)</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Medium (0.45-0.75)</span>
           <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Standard (&lt;0.45)</span>
@@ -75,6 +84,45 @@ function ComplaintMap() {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
+          {/* Render Real Spatial Surge Circles */}
+          {surges.map((s) => {
+            if (!s.centroid || typeof s.centroid.lat !== "number" || typeof s.centroid.lng !== "number") return null;
+            const isActive = s.status === "active";
+            const radius = Math.max(300, (s.complaintCount || 5) * 60);
+
+            return (
+              <Circle
+                key={s._id}
+                center={[s.centroid.lat, s.centroid.lng]}
+                radius={radius}
+                pathOptions={{
+                  color: isActive ? "#ef4444" : "#10b981",
+                  fillColor: isActive ? "#f87171" : "#34d399",
+                  fillOpacity: isActive ? 0.35 : 0.15,
+                  weight: isActive ? 3 : 1.5,
+                  dashArray: isActive ? "6, 6" : undefined
+                }}
+              >
+                <Popup>
+                  <div className="p-1 space-y-1 font-sans text-xs">
+                    <div className="font-bold flex items-center justify-between">
+                      <span className="capitalize text-red-600 font-black">🔥 {s.category} Spatial Surge</span>
+                      <span className={`px-1.5 py-0.5 rounded text-[9px] font-black ${isActive ? "bg-red-100 text-red-700" : "bg-emerald-100 text-emerald-700"}`}>
+                        {s.status.toUpperCase()}
+                      </span>
+                    </div>
+                    <p className="text-slate-600 text-xs">
+                      <strong>{s.complaintCount} reports</strong> from {s.distinctUsers || 3} distinct citizens in 10-min window (p &lt; 0.01).
+                    </p>
+                    <div className="text-[10px] text-indigo-600 font-mono pt-1 border-t">
+                      H3 Cell ID: {s.cellId}
+                    </div>
+                  </div>
+                </Popup>
+              </Circle>
+            );
+          })}
+
           <MarkerClusterGroup
             chunkedLoading
             maxClusterRadius={50}
@@ -89,11 +137,12 @@ function ComplaintMap() {
           >
             {complaints.map((c) => {
               if (c.latitude && c.longitude) {
+                const displayScore = c.finalPriority || c.priorityScoreS2;
                 return (
                   <Marker 
                     key={c._id} 
                     position={[c.latitude, c.longitude]}
-                    icon={createCustomMarker(c.priorityScoreS2)}
+                    icon={createCustomMarker(displayScore)}
                   >
                     <Popup className="custom-popup" maxWidth={320}>
                       <div className="p-1 space-y-3 font-sans">
@@ -121,16 +170,18 @@ function ComplaintMap() {
                             <span className="font-semibold">{c.severityScore?.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-slate-600">
-                            <span>Spatial Density:</span>
-                            <span className="font-semibold">{c.spatialDensity} pts</span>
+                            <span>Stage-2 Score (S2):</span>
+                            <span className="font-semibold">{c.priorityScoreS2?.toFixed(2)}</span>
                           </div>
-                          <div className="flex justify-between text-slate-600">
-                            <span>Temporal Density:</span>
-                            <span className="font-semibold">{c.temporalDensity} pts</span>
-                          </div>
+                          {c.surgeFlag && (
+                            <div className="flex justify-between text-red-600 font-bold">
+                              <span>Surge Boost:</span>
+                              <span>+{(0.20 * (c.surgeStrength || 1)).toFixed(2)}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between text-slate-600 border-t pt-1 font-bold">
-                            <span className="text-indigo-600">Final Rank:</span>
-                            <span className="text-indigo-600">{c.priorityScoreS2?.toFixed(2)}</span>
+                            <span className="text-indigo-600">Final Queue Priority:</span>
+                            <span className="text-indigo-600">{displayScore?.toFixed(2)}</span>
                           </div>
                         </div>
 

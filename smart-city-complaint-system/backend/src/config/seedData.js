@@ -3,8 +3,10 @@ const path = require("path");
 const readline = require("readline");
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const h3 = require("h3-js");
 const User = require("../models/User");
 const Complaint = require("../models/Complaint");
+const { updateCellBaselines } = require("../jobs/baselineJob");
 
 const CSV_PATH = path.join(__dirname, "../../../ml/data/final_priority_dataset.csv");
 
@@ -63,14 +65,10 @@ const seedData = async () => {
 
     let headers = [];
     let seededCount = 0;
-    const complaintsToInsert = [];
-    const MAX_SEED_RECORDS = 2000; // Seed 2,000 complaints to populate the visualizers beautifully
+    const rawRows = [];
+    const MAX_SEED_RECORDS = 2000;
 
     for await (const line of rl) {
-      // Very basic CSV parser that handles commas
-      // Note: Descriptions might contain commas, so we split using regex or a simpler comma split
-      // since we only need simple columns.
-      // A simple regex to split comma-separated values, ignoring commas in double quotes:
       const parts = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
       if (headers.length === 0) {
@@ -78,15 +76,33 @@ const seedData = async () => {
         continue;
       }
 
-      // Map values
       const row = {};
       headers.forEach((h, index) => {
         row[h] = parts[index] ? parts[index].trim().replace(/^"|"$/g, '') : "";
       });
 
-      // Extract values
+      rawRows.push(row);
+      seededCount++;
+      if (seededCount >= MAX_SEED_RECORDS) {
+        break;
+      }
+    }
+
+    rl.close();
+    fileStream.destroy();
+
+    // Map timestamps across the last 6 weeks (42 days) up to now
+    const now = Date.now();
+    const sixWeeksAgo = now - 42 * 24 * 60 * 60 * 1000;
+
+    // Parse timestamps from raw rows to find CSV min and max
+    const parsedTimes = rawRows.map(r => r["timestamp"] ? new Date(r["timestamp"]).getTime() : 0).filter(t => t > 0);
+    const minCsvTime = parsedTimes.length > 0 ? Math.min(...parsedTimes) : 0;
+    const maxCsvTime = parsedTimes.length > 0 ? Math.max(...parsedTimes) : 1;
+
+    const complaintsToInsert = rawRows.map((row, idx) => {
       const text = row["text"] || "Civic complaint reported via 311";
-      const category = row["category_clean"] || "Unclassified";
+      const category = (row["category_clean"] || "unclassified").toLowerCase();
       const latitude = parseFloat(row["lat"]);
       const longitude = parseFloat(row["lon"]);
       const severityScore = parseFloat(row["severity_score"]) || 0.5;
@@ -94,45 +110,47 @@ const seedData = async () => {
       const temporalDensity = parseFloat(row["temporal_density"]) || 0;
       const acceleration = parseFloat(row["acceleration"]) || 0;
       const priorityScore = parseFloat(row["priority_score"]) || 0;
-      // If stsep_stage2 is not present, calculate a mock Stage 2 score
-      // stage 2 formula: 0.76 * severity_norm + 0.18 * spatial_norm + 0.06 * temporal_norm
       const priorityScoreS2 = parseFloat(row["stsep_stage2"]) || (0.76 * severityScore + 0.18 * (spatialDensity / 50) + 0.06 * (temporalDensity / 20));
 
-      const createdAt = row["timestamp"] ? new Date(row["timestamp"]) : new Date();
-
-      if (!isNaN(latitude) && !isNaN(longitude)) {
-        complaintsToInsert.push({
-          citizen: citizenUser._id,
-          description: text,
-          category,
-          latitude,
-          longitude,
-          severityScore,
-          spatialDensity,
-          temporalDensity,
-          acceleration,
-          priorityScore,
-          priorityScoreS2,
-          isSeeded: true,
-          status: Math.random() > 0.7 ? "Resolved" : (Math.random() > 0.5 ? "In Progress" : "Pending"),
-          createdAt,
-          updatedAt: createdAt
-        });
-
-        seededCount++;
-        if (seededCount >= MAX_SEED_RECORDS) {
-          break;
-        }
+      let createdAt;
+      const rawT = row["timestamp"] ? new Date(row["timestamp"]).getTime() : 0;
+      if (rawT > 0 && maxCsvTime > minCsvTime) {
+        const ratio = (rawT - minCsvTime) / (maxCsvTime - minCsvTime);
+        createdAt = new Date(sixWeeksAgo + ratio * (now - sixWeeksAgo));
+      } else {
+        createdAt = new Date(sixWeeksAgo + (idx / rawRows.length) * (now - sixWeeksAgo));
       }
-    }
 
-    rl.close();
-    fileStream.destroy();
+      const cellId = (!isNaN(latitude) && !isNaN(longitude)) ? h3.latLngToCell(latitude, longitude, 8) : null;
+
+      return {
+        citizen: citizenUser._id,
+        description: text,
+        category,
+        cellId,
+        latitude,
+        longitude,
+        severityScore,
+        spatialDensity,
+        temporalDensity,
+        acceleration,
+        priorityScore,
+        priorityScoreS2,
+        isSeeded: true,
+        status: Math.random() > 0.7 ? "Resolved" : (Math.random() > 0.5 ? "In Progress" : "Pending"),
+        createdAt,
+        updatedAt: createdAt
+      };
+    }).filter(c => c.cellId !== null);
 
     if (complaintsToInsert.length > 0) {
       console.log(`Inserting ${complaintsToInsert.length} complaints into MongoDB...`);
       await Complaint.insertMany(complaintsToInsert);
       console.log("Database seeded successfully!");
+
+      console.log("Calculating initial 6-week H3 cell baselines...");
+      await updateCellBaselines(6);
+      console.log("Cell baselines populated successfully!");
     } else {
       console.log("No valid complaints found in CSV to seed.");
     }

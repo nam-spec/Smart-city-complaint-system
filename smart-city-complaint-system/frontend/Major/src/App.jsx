@@ -11,6 +11,8 @@ import ComplaintMap from "./pages/ComplaintMap";
 import AdminComplaints from "./pages/AdminComplaints";
 import AdminHotspots from "./pages/AdminHotspots";
 import AdminDiagnostics from "./pages/AdminDiagnostics";
+import SurgeHistory from "./pages/SurgeHistory";
+import SurgeDetail from "./pages/SurgeDetail";
 
 function App() {
   const location = useLocation();
@@ -81,6 +83,28 @@ function App() {
             <ProtectedRoute allowedRoles={["admin"]}>
               <AdminLayout>
                 <AdminHotspots />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/surges/history"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminLayout>
+                <SurgeHistory />
+              </AdminLayout>
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/surges/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin"]}>
+              <AdminLayout>
+                <SurgeDetail />
               </AdminLayout>
             </ProtectedRoute>
           }

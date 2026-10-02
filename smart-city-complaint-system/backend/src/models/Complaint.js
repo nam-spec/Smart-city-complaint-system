@@ -29,6 +29,11 @@ const complaintSchema = new mongoose.Schema(
       required: true
     },
 
+    cellId: {
+      type: String,
+      index: true
+    },
+
     imagePath: {
       type: String,
       required: false
@@ -62,6 +67,43 @@ const complaintSchema = new mongoose.Schema(
     priorityScoreS2: {
       type: Number,
       default: 0
+    },
+
+    surgeFlag: {
+      type: Boolean,
+      default: false
+    },
+
+    surgeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Surge",
+      default: null,
+      index: true
+    },
+
+    observedCount: {
+      type: Number,
+      default: 0
+    },
+
+    expectedCount: {
+      type: Number,
+      default: 0
+    },
+
+    pValue: {
+      type: Number,
+      default: 1.0
+    },
+
+    surgeStrength: {
+      type: Number,
+      default: 0.0
+    },
+
+    finalPriority: {
+      type: Number,
+      default: 0.0
     },
 
     isSeeded: {

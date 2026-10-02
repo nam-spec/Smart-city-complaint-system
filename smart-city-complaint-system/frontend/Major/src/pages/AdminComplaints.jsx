@@ -4,16 +4,21 @@ import api, { BACKEND_URL } from "../api/axios";
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
   const [filteredComplaints, setFilteredComplaints] = useState([]);
+  const [activeSurges, setActiveSurges] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get("/complaints")
-      .then((res) => {
-        setComplaints(res.data);
-        setFilteredComplaints(res.data);
+    Promise.all([
+      api.get("/complaints"),
+      api.get("/analytics/surges?status=active").catch(() => ({ data: { surges: [] } }))
+    ])
+      .then(([compRes, surgeRes]) => {
+        setComplaints(compRes.data);
+        setFilteredComplaints(compRes.data);
+        setActiveSurges(surgeRes.data.surges || []);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
@@ -86,6 +91,28 @@ function AdminComplaints() {
       {/* Main Backlog List */}
       <main className="p-8 space-y-6">
 
+        {/* Active Surge Banner */}
+        {activeSurges.length > 0 && (
+          <div className="bg-red-500/10 border border-red-500/30 rounded-2xl p-4 flex items-center justify-between text-red-900">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-red-600 animate-ping"></span>
+              <div>
+                <span className="font-bold text-xs uppercase tracking-wider text-red-700">Active Spatial Surges Detected</span>
+                <p className="text-xs text-slate-700 mt-0.5">
+                  {activeSurges.length} active complaint surge{activeSurges.length > 1 ? "s" : ""} in progress. Dynamic priority boost (+0.20 × strength) active on affected neighborhood complaints.
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              {activeSurges.map(s => (
+                <span key={s._id} className="text-[10px] font-black uppercase px-2.5 py-1 rounded-full bg-red-600 text-white shadow-sm">
+                  {s.category} (Peak Z: {s.peakZ})
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Filter controls panel */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3">
@@ -141,7 +168,7 @@ function AdminComplaints() {
                   <th className="px-6 py-4">Description</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Lat, Lng Coordinates</th>
-                  <th className="px-6 py-4">STSEP Score</th>
+                  <th className="px-6 py-4">Final Queue Score</th>
                   <th className="px-6 py-4">Submitted On</th>
                   <th className="px-6 py-4">Status & Action</th>
                 </tr>
@@ -154,7 +181,11 @@ function AdminComplaints() {
                     </td>
                   </tr>
                 ) : (
-                  filteredComplaints.map((c) => (
+                  filteredComplaints.map((c) => {
+                    const finalScore = c.freshFinalPriority || c.finalPriority || c.priorityScoreS2 || 0;
+                    const isSurge = c.surgeFlag || (c.surgeId && c.surgeId.status === "active");
+
+                    return (
                     <tr key={c._id} className="hover:bg-slate-50/40 transition-colors">
                       
                       {/* Image evidence */}
@@ -190,11 +221,21 @@ function AdminComplaints() {
                         {c.latitude?.toFixed(4)}, {c.longitude?.toFixed(4)}
                       </td>
 
-                      {/* Priority Score */}
+                      {/* Priority Score & Surge Badge */}
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.priorityScoreS2)}`}>
-                          {c.priorityScoreS2?.toFixed(2)}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(finalScore)}`}>
+                            {finalScore.toFixed(3)}
+                          </span>
+                          {isSurge && (
+                            <span 
+                              title={`${c.observedCount || 6} reports vs ${c.expectedCount ? Number(c.expectedCount).toFixed(2) : "1.00"} normal, p < 0.001`}
+                              className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-600 text-white animate-pulse shadow-sm cursor-help"
+                            >
+                              SURGE
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* Date */}
@@ -215,13 +256,11 @@ function AdminComplaints() {
                         >
                           <option value="Pending">Pending</option>
                           <option value="In Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
                         </select>
                       </td>
-
                     </tr>
-                  ))
-                )}
+                  );
+                }))}
               </tbody>
             </table>
           </div>

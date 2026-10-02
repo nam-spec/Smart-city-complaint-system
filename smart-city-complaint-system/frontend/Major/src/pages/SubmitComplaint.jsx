@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 
 function SubmitComplaint() {
@@ -9,6 +9,7 @@ function SubmitComplaint() {
   const [longitude, setLongitude] = useState(null);
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [activeSurgeNotice, setActiveSurgeNotice] = useState(null);
 
   const getLocation = () => {
     setFetchingLocation(true);
@@ -25,11 +26,26 @@ function SubmitComplaint() {
         setLatitude(fallbackLat);
         setLongitude(fallbackLng);
         setFetchingLocation(false);
-        alert("Location access denied or timed out. Seeded random near Mumbai for demonstration.");
       },
       { timeout: 10000 }
     );
   };
+
+  useEffect(() => {
+    // Check if any active surge exists
+    fetch("/api/analytics/surges?status=active")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && data.surges && data.surges.length > 0) {
+          const topSurge = data.surges[0];
+          setActiveSurgeNotice({
+            category: topSurge.category,
+            count: topSurge.complaintCount || 6
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -65,7 +81,7 @@ function SubmitComplaint() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Complaint submitted successfully! Model priority has been calculated.");
+      alert("Complaint submitted successfully! STSEP model priority has been calculated.");
       setDescription("");
       setImage(null);
       setImagePreview(null);
@@ -83,8 +99,21 @@ function SubmitComplaint() {
   return (
     <div className="min-h-screen bg-slate-50/50 p-6 sm:p-8 flex items-center justify-center font-sans animate-fade-in">
 
-      <div className="bg-white border border-slate-200/80 shadow-xl rounded-3xl w-full max-w-xl overflow-hidden animate-fade-in">
+      <div className="bg-white border border-slate-200/80 shadow-xl rounded-3xl w-full max-w-xl overflow-hidden animate-fade-in space-y-0">
         
+        {/* Active Neighborhood Surge Notice */}
+        {activeSurgeNotice && (
+          <div className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white px-6 py-4 flex items-center gap-3">
+            <span className="text-xl">📢</span>
+            <div className="text-xs">
+              <span className="font-extrabold uppercase tracking-wider block">Neighborhood Alert</span>
+              <p className="mt-0.5 text-amber-100 font-medium">
+                {activeSurgeNotice.count} neighbours reported a <strong className="text-white capitalize">{activeSurgeNotice.category}</strong> issue nearby. It's a known spatial surge and the municipal team has been alerted!
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Form Header */}
         <div className="p-6 sm:p-8 border-b border-slate-100 bg-slate-50/50">
           <h1 className="text-2xl font-black text-slate-800">
