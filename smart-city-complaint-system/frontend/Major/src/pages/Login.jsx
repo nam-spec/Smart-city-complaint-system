@@ -82,7 +82,7 @@ function Login() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={handleSubmit} autoComplete="off" data-lpignore="true" className="space-y-6">
             <div className="space-y-2">
               <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Email Address</label>
               <div className="relative">
@@ -93,6 +93,8 @@ function Login() {
                 </span>
                 <input
                   type="email"
+                  name="user_login_email"
+                  autoComplete="username"
                   placeholder="name@example.com"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                   onChange={(e) => setEmail(e.target.value)}
@@ -112,6 +114,9 @@ function Login() {
                 </span>
                 <input
                   type="password"
+                  name="user_login_password"
+                  autoComplete="current-password"
+                  data-lpignore="true"
                   placeholder="••••••••"
                   className="w-full bg-slate-900 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
                   onChange={(e) => setPassword(e.target.value)}
@@ -124,7 +129,7 @@ function Login() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold transition-all duration-300 shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01]"
+              className="w-full py-3 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500 hover:from-indigo-600 hover:to-violet-600 text-white font-semibold transition-all duration-300 shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] cursor-pointer"
             >
               {loading ? "Authenticating..." : "Sign In"}
             </button>
@@ -137,14 +142,23 @@ function Login() {
             </Link>
           </div>
           
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 text-xs text-slate-500 space-y-1">
-            <span className="font-bold text-slate-400 block mb-1">Demo Credentials:</span>
-            <div className="flex justify-between">
-              <span>Admin: <strong className="text-indigo-400">admin@smartcity.gov</strong></span>
-              <span>Citizen: <strong className="text-indigo-400">citizen@311.gov</strong></span>
-            </div>
-            <div className="text-center mt-1 border-t border-slate-800/50 pt-1">
-              Password: <strong className="text-slate-400">password123</strong>
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl p-4 text-xs text-slate-500 space-y-2">
+            <span className="font-bold text-slate-400 block mb-1">Quick Demo Login:</span>
+            <div className="grid grid-cols-2 gap-2">
+              <button 
+                type="button" 
+                onClick={() => { setEmail("admin@smartcity.gov"); setPassword("password123"); }}
+                className="px-3 py-1.5 rounded-lg bg-indigo-950/60 border border-indigo-800/60 text-indigo-300 font-medium hover:bg-indigo-900/80 transition text-left cursor-pointer"
+              >
+                🔐 Admin Demo
+              </button>
+              <button 
+                type="button" 
+                onClick={() => { setEmail("citizen@311.gov"); setPassword("password123"); }}
+                className="px-3 py-1.5 rounded-lg bg-violet-950/60 border border-violet-800/60 text-violet-300 font-medium hover:bg-violet-900/80 transition text-left cursor-pointer"
+              >
+                👤 Citizen Demo
+              </button>
             </div>
           </div>
 

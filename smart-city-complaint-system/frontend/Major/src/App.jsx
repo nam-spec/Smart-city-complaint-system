@@ -1,4 +1,6 @@
-import { Routes, Route, useLocation } from "react-router-dom";
+import { useContext } from "react";
+import { Routes, Route, useLocation, Navigate } from "react-router-dom";
+import { AuthContext } from "./context/AuthContext";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -16,22 +18,34 @@ import SurgeDetail from "./pages/SurgeDetail";
 
 function App() {
   const location = useLocation();
+  const { user } = useContext(AuthContext);
   const isAdminPage = location.pathname.startsWith("/admin");
 
   return (
     <>
-      {!isAdminPage && location.pathname !== "/login" && location.pathname !== "/register" && <Navbar />}
+      {!isAdminPage && location.pathname !== "/login" && location.pathname !== "/register" && user && <Navbar />}
 
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/login" 
+          element={
+            user ? <Navigate to={user.role === "admin" ? "/admin" : "/"} replace /> : <Login />
+          } 
+        />
         <Route path="/register" element={<Register />} />
 
         <Route
           path="/"
           element={
-            <ProtectedRoute allowedRoles={["citizen"]}>
-              <Home />
-            </ProtectedRoute>
+            !user ? (
+              <Login />
+            ) : user.role === "admin" ? (
+              <Navigate to="/admin" replace />
+            ) : (
+              <ProtectedRoute allowedRoles={["citizen"]}>
+                <Home />
+              </ProtectedRoute>
+            )
           }
         />
 

@@ -99,6 +99,8 @@ export default function AdminDashboard() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [simulating, setSimulating] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const fetchDashboardData = async () => {
     try {
@@ -147,6 +149,7 @@ export default function AdminDashboard() {
     }
 
     setFilteredComplaints(result);
+    setCurrentPage(1);
   }, [searchTerm, categoryFilter, statusFilter, complaints]);
 
   const handleStatusChange = (id, newStatus) => {
@@ -360,51 +363,88 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ) : (
-                  filteredComplaints.map((c) => (
-                    <tr key={c._id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-6 py-4 font-medium text-slate-800 max-w-md truncate">
-                        {c.description}
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
-                          {c.category}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.finalPriority || c.priorityScoreS2)}`}>
-                            {(c.finalPriority || c.priorityScoreS2)?.toFixed(2)}
+                  (() => {
+                    const totalPages = Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage));
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const paginated = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
+
+                    return paginated.map((c) => (
+                      <tr key={c._id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="px-6 py-4 font-medium text-slate-800 max-w-md truncate">
+                          {c.description}
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                            {c.category}
                           </span>
-                          {c.surgeFlag && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
-                              🔥 SURGE
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.finalPriority || c.priorityScoreS2)}`}>
+                              {(c.finalPriority || c.priorityScoreS2)?.toFixed(2)}
                             </span>
-                          )}
-                          {(c.isFake || c.veracityStatus === "FAKE_MISMATCH") && (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
-                              ⚠️ FAKE
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={c.status}
-                          onChange={(e) => handleStatusChange(c._id, e.target.value)}
-                          className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none cursor-pointer hover:border-slate-300 transition"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                          <option value="Resolved">Resolved</option>
-                        </select>
-                      </td>
-                    </tr>
-                  ))
+                            {c.surgeFlag && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
+                                🔥 SURGE
+                              </span>
+                            )}
+                            {(c.isFake || c.veracityStatus === "FAKE_MISMATCH") && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
+                                ⚠️ FAKE
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <select
+                            value={c.status}
+                            onChange={(e) => handleStatusChange(c._id, e.target.value)}
+                            className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none cursor-pointer hover:border-slate-300 transition"
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Resolved">Resolved</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ));
+                  })()
                 )}
               </tbody>
             </table>
           </div>
 
+          {/* Admin Dashboard Pagination Bar */}
+          {filteredComplaints.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <div>
+                Showing <strong className="text-slate-800">{(currentPage - 1) * itemsPerPage + 1}</strong> to <strong className="text-slate-800">{Math.min(currentPage * itemsPerPage, filteredComplaints.length)}</strong> of <strong className="text-slate-800">{filteredComplaints.length}</strong> entries
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                >
+                  ← Previous
+                </button>
+
+                <div className="flex items-center gap-1 px-2">
+                  <span className="font-semibold text-slate-700">Page {currentPage}</span>
+                  <span className="text-slate-400">of {Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage))}</span>
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage))))}
+                  disabled={currentPage >= Math.ceil(filteredComplaints.length / itemsPerPage)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </main>

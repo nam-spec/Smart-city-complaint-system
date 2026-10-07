@@ -9,6 +9,8 @@ function AdminComplaints() {
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     Promise.all([
@@ -42,6 +44,7 @@ function AdminComplaints() {
     }
 
     setFilteredComplaints(result);
+    setCurrentPage(1);
   }, [searchTerm, categoryFilter, statusFilter, complaints]);
 
   const handleStatusChange = (id, newStatus) => {
@@ -182,119 +185,159 @@ function AdminComplaints() {
                     </td>
                   </tr>
                 ) : (
-                  filteredComplaints.map((c) => {
-                    const finalScore = c.freshFinalPriority || c.finalPriority || c.priorityScoreS2 || 0;
-                    const isSurge = c.surgeFlag || (c.surgeId && c.surgeId.status === "active");
+                  (() => {
+                    const totalPages = Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage));
+                    const startIndex = (currentPage - 1) * itemsPerPage;
+                    const paginated = filteredComplaints.slice(startIndex, startIndex + itemsPerPage);
 
-                    return (
-                    <tr key={c._id} className="hover:bg-slate-50/40 transition-colors">
-                      
-                      {/* Image evidence */}
-                      <td className="px-6 py-4">
-                        {c.imagePath ? (
-                          <img
-                            src={`${BACKEND_URL}/${c.imagePath}`}
-                            alt="complaint evidence"
-                            className="w-11 h-11 object-cover rounded-xl border border-slate-100 shadow-sm"
-                          />
-                        ) : (
-                          <div className="w-11 h-11 rounded-xl bg-slate-100/80 border border-slate-200/50 flex flex-col items-center justify-center text-[8px] text-slate-400 font-bold leading-none text-center">
-                            <span>Seeded</span>
-                            <span>Record</span>
-                          </div>
-                        )}
-                      </td>
+                    return paginated.map((c) => {
+                      const finalScore = c.freshFinalPriority || c.finalPriority || c.priorityScoreS2 || 0;
+                      const isSurge = c.surgeFlag || (c.surgeId && c.surgeId.status === "active");
 
-                      {/* Description */}
-                      <td className="px-6 py-4 font-medium text-slate-800 max-w-xs truncate" title={c.description}>
-                        {c.description}
-                      </td>
+                      return (
+                        <tr key={c._id} className="hover:bg-slate-50/40 transition-colors">
+                          
+                          {/* Image evidence */}
+                          <td className="px-6 py-4">
+                            {c.imagePath ? (
+                              <img
+                                src={`${BACKEND_URL}/${c.imagePath}`}
+                                alt="complaint evidence"
+                                className="w-11 h-11 object-cover rounded-xl border border-slate-100 shadow-sm"
+                              />
+                            ) : (
+                              <div className="w-11 h-11 rounded-xl bg-slate-100/80 border border-slate-200/50 flex flex-col items-center justify-center text-[8px] text-slate-400 font-bold leading-none text-center">
+                                <span>Seeded</span>
+                                <span>Record</span>
+                              </div>
+                            )}
+                          </td>
 
-                      {/* Category */}
-                      <td className="px-6 py-4">
-                        <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
-                          {c.category}
-                        </span>
-                      </td>
+                          {/* Description */}
+                          <td className="px-6 py-4 font-medium text-slate-800 max-w-xs truncate" title={c.description}>
+                            {c.description}
+                          </td>
 
-                      {/* Coordinates */}
-                      <td className="px-6 py-4 text-xs font-mono text-slate-500">
-                        {c.latitude?.toFixed(4)}, {c.longitude?.toFixed(4)}
-                      </td>
-
-                      {/* Priority Score & Surge Badge */}
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(finalScore)}`}>
-                            {finalScore.toFixed(3)}
-                          </span>
-                          {isSurge && (
-                            <span 
-                              title={`${c.observedCount || 6} reports vs ${c.expectedCount ? Number(c.expectedCount).toFixed(2) : "1.00"} normal, p < 0.001`}
-                              className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-600 text-white animate-pulse shadow-sm cursor-help"
-                            >
-                              SURGE
+                          {/* Category */}
+                          <td className="px-6 py-4">
+                            <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                              {c.category}
                             </span>
-                          )}
-                        </div>
-                      </td>
+                          </td>
 
-                      {/* CLIP Veracity Status */}
-                      <td className="px-6 py-4">
-                        {c.isFake || c.veracityStatus === "FAKE_MISMATCH" ? (
-                          <span 
-                            title={c.veracityExplanation || "CLIP cross-modal image-text mismatch"}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 shadow-sm cursor-help inline-flex items-center gap-1"
-                          >
-                            <span>⚠️</span> FAKE / MISMATCH
-                          </span>
-                        ) : c.veracityStatus === "SUSPICIOUS" ? (
-                          <span 
-                            title={c.veracityExplanation || "CLIP low cross-modal similarity"}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 cursor-help inline-flex items-center gap-1"
-                          >
-                            <span>⚠️</span> SUSPICIOUS
-                          </span>
-                        ) : c.veracityStatus === "VERIFIED" ? (
-                          <span 
-                            title={`CLIP Similarity: ${((c.veracityScore || 1.0) * 100).toFixed(1)}% (${c.clipVisualCategory || c.category})`}
-                            className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-help inline-flex items-center gap-1"
-                          >
-                            <span>✓</span> VERIFIED
-                          </span>
-                        ) : (
-                          <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400 bg-slate-100">
-                            UNVERIFIED
-                          </span>
-                        )}
-                      </td>
+                          {/* Coordinates */}
+                          <td className="px-6 py-4 text-xs font-mono text-slate-500">
+                            {c.latitude?.toFixed(4)}, {c.longitude?.toFixed(4)}
+                          </td>
 
-                      {/* Date */}
-                      <td className="px-6 py-4 text-xs text-slate-400">
-                        {new Date(c.createdAt).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric"
-                        })}
-                      </td>
+                          {/* Priority Score & Surge Badge */}
+                          <td className="px-6 py-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(finalScore)}`}>
+                                {finalScore.toFixed(3)}
+                              </span>
+                              {isSurge && (
+                                <span 
+                                  title={`${c.observedCount || 6} reports vs ${c.expectedCount ? Number(c.expectedCount).toFixed(2) : "1.00"} normal, p < 0.001`}
+                                  className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase bg-red-600 text-white animate-pulse shadow-sm cursor-help"
+                                >
+                                  SURGE
+                                </span>
+                              )}
+                            </div>
+                          </td>
 
-                      {/* Status Action select */}
-                      <td className="px-6 py-4">
-                        <select
-                          value={c.status}
-                          onChange={(e) => handleStatusChange(c._id, e.target.value)}
-                          className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none cursor-pointer hover:border-slate-350 transition"
-                        >
-                          <option value="Pending">Pending</option>
-                          <option value="In Progress">In Progress</option>
-                        </select>
-                      </td>
-                    </tr>
-                  );
-                }))}
+                          {/* CLIP Veracity Status */}
+                          <td className="px-6 py-4">
+                            {c.isFake || c.veracityStatus === "FAKE_MISMATCH" ? (
+                              <span 
+                                title={c.veracityExplanation || "CLIP cross-modal image-text mismatch"}
+                                className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 shadow-sm cursor-help inline-flex items-center gap-1"
+                              >
+                                <span>⚠️</span> FAKE / MISMATCH
+                              </span>
+                            ) : c.veracityStatus === "SUSPICIOUS" ? (
+                              <span 
+                                title={c.veracityExplanation || "CLIP low cross-modal similarity"}
+                                className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 cursor-help inline-flex items-center gap-1"
+                              >
+                                <span>⚠️</span> SUSPICIOUS
+                              </span>
+                            ) : c.veracityStatus === "VERIFIED" ? (
+                              <span 
+                                title={`CLIP Similarity: ${((c.veracityScore || 1.0) * 100).toFixed(1)}% (${c.clipVisualCategory || c.category})`}
+                                className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-help inline-flex items-center gap-1"
+                              >
+                                <span>✓</span> VERIFIED
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400 bg-slate-100">
+                                UNVERIFIED
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Date */}
+                          <td className="px-6 py-4 text-xs text-slate-400">
+                            {new Date(c.createdAt).toLocaleDateString(undefined, {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric"
+                            })}
+                          </td>
+
+                          {/* Status Action select */}
+                          <td className="px-6 py-4">
+                            <select
+                              value={c.status}
+                              onChange={(e) => handleStatusChange(c._id, e.target.value)}
+                              className="bg-white border border-slate-200 rounded-xl px-2.5 py-1 text-xs text-slate-700 focus:outline-none cursor-pointer hover:border-slate-350 transition"
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="In Progress">In Progress</option>
+                              <option value="Resolved">Resolved</option>
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    });
+                  })()
+                )}
               </tbody>
             </table>
           </div>
+
+          {/* Pagination Controls */}
+          {filteredComplaints.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+              <div>
+                Showing <strong className="text-slate-800">{(currentPage - 1) * itemsPerPage + 1}</strong> to <strong className="text-slate-800">{Math.min(currentPage * itemsPerPage, filteredComplaints.length)}</strong> of <strong className="text-slate-800">{filteredComplaints.length}</strong> complaints
+              </div>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                >
+                  ← Previous
+                </button>
+
+                <div className="flex items-center gap-1 px-2">
+                  <span className="font-semibold text-slate-700">Page {currentPage}</span>
+                  <span className="text-slate-400">of {Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage))}</span>
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, Math.max(1, Math.ceil(filteredComplaints.length / itemsPerPage))))}
+                  disabled={currentPage >= Math.ceil(filteredComplaints.length / itemsPerPage)}
+                  className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white font-medium hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition cursor-pointer"
+                >
+                  Next →
+                </button>
+              </div>
+            </div>
+          )}
 
         </div>
 
