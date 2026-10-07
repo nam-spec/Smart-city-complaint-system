@@ -1,6 +1,6 @@
 const express = require("express");
 const { protect, authorize } = require("../middleware/authMiddleware");
-const { getBasicStats, getCategoryDistribution, getAverageResolutionTime, getHotspots, getMLMetrics, getMLExplainability } = require("../controllers/analyticsController");
+const { getBasicStats, getCategoryDistribution, getAverageResolutionTime, getHotspots, getMLMetrics, getMLExplainability, getSurgeBenchmark } = require("../controllers/analyticsController");
 const { getCellBaseline } = require("../controllers/surgeController");
 
 const router = express.Router();
@@ -11,6 +11,7 @@ router.get("/avg-resolution-time", protect, authorize("admin"), getAverageResolu
 router.get("/hotspots", protect, authorize("admin"), getHotspots);
 router.get("/ml-metrics", protect, authorize("admin"), getMLMetrics);
 router.get("/ml-explainability", protect, authorize("admin"), getMLExplainability);
+router.get("/surge-benchmark", getSurgeBenchmark);
 router.get("/cell-baseline", getCellBaseline);
 
 module.exports = router;

@@ -4,6 +4,7 @@ import api, { BACKEND_URL } from "../api/axios";
 function AdminDiagnostics() {
   const [metrics, setMetrics] = useState([]);
   const [explainability, setExplainability] = useState([]);
+  const [surgeBenchmark, setSurgeBenchmark] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("metrics");
 
@@ -40,12 +41,14 @@ function AdminDiagnostics() {
   useEffect(() => {
     const fetchMLData = async () => {
       try {
-        const [mRes, eRes] = await Promise.all([
+        const [mRes, eRes, bRes] = await Promise.all([
           api.get("/analytics/ml-metrics"),
-          api.get("/analytics/ml-explainability")
+          api.get("/analytics/ml-explainability"),
+          api.get("/analytics/surge-benchmark").catch(() => ({ data: { evaluated: false } }))
         ]);
         setMetrics(mRes.data);
         setExplainability(eRes.data);
+        setSurgeBenchmark(bRes.data);
       } catch (err) {
         console.error("Error loading ML diagnostics:", err);
       } finally {
@@ -97,25 +100,29 @@ function AdminDiagnostics() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Detection Delay</span>
-              <span className="text-2xl font-black text-white">~1.4 min</span>
+              <span className="text-xl font-black text-white">
+                {surgeBenchmark?.evaluated ? `${surgeBenchmark.detectionDelayMinutes?.toFixed(2)} min` : "Not yet evaluated"}
+              </span>
               <p className="text-[10px] text-slate-400">Sliding 10-minute window</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">False Alarms / Day</span>
-              <span className="text-2xl font-black text-emerald-400">&lt; 0.05 / day</span>
+              <span className="text-xl font-black text-emerald-400">
+                {surgeBenchmark?.evaluated ? `${surgeBenchmark.falseAlarmsPerDay?.toFixed(3)} / day` : "Not yet evaluated"}
+              </span>
               <p className="text-[10px] text-slate-400">Triple anti-spam check</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Empirical Bayes Shrinkage</span>
-              <span className="text-2xl font-black text-amber-400">λ_shrunk</span>
+              <span className="text-xl font-black text-amber-400">λ_shrunk (k=20)</span>
               <p className="text-[10px] text-slate-400">Cell → Ward → City → Default</p>
             </div>
 
             <div className="p-4 rounded-2xl bg-slate-800/60 border border-slate-700/60 space-y-1">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Neighborhood Disk</span>
-              <span className="text-2xl font-black text-indigo-300">7 cells</span>
+              <span className="text-xl font-black text-indigo-300">7 cells</span>
               <p className="text-[10px] text-slate-400">H3 Res 8 gridDisk(cell, 1)</p>
             </div>
           </div>

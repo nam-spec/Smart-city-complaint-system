@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 function SurgeDetail() {
   const { id } = useParams();
@@ -12,12 +13,11 @@ function SurgeDetail() {
     const fetchSurgeDetail = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`/api/analytics/surges/${id}`);
-        const result = await res.json();
-        if (result.success) {
-          setData(result);
+        const res = await api.get(`/analytics/surges/${id}`);
+        if (res.data && res.data.success) {
+          setData(res.data);
         } else {
-          setError(result.message || "Surge not found");
+          setError(res.data?.message || "Surge not found");
         }
       } catch (err) {
         setError("Failed to fetch surge details");

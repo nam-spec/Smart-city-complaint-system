@@ -106,6 +106,32 @@ const complaintSchema = new mongoose.Schema(
       default: 0.0
     },
 
+    isFake: {
+      type: Boolean,
+      default: false
+    },
+
+    veracityScore: {
+      type: Number,
+      default: 1.0
+    },
+
+    veracityStatus: {
+      type: String,
+      enum: ["VERIFIED", "SUSPICIOUS", "FAKE_MISMATCH"],
+      default: "VERIFIED"
+    },
+
+    veracityExplanation: {
+      type: String,
+      default: ""
+    },
+
+    clipVisualCategory: {
+      type: String,
+      default: ""
+    },
+
     isSeeded: {
       type: Boolean,
       default: false

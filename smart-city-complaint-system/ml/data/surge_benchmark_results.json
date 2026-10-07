@@ -1,0 +1,131 @@
+{
+  "evaluatedAt": "2026-10-02T16:48:01.271Z",
+  "detectionDelayMinutes": 1.8,
+  "falseAlarmsPerDay": 0,
+  "injectionRecallPercentage": 100,
+  "antiSpamValidationPassed": true,
+  "locationShiftIndependencePassed": true,
+  "selectedLambda": 0.2,
+  "injectionResults": [
+    {
+      "multiplier": 1.5,
+      "targetCount": 5,
+      "detected": true,
+      "detectedAtStep": 1,
+      "detectionDelayMinutes": 2,
+      "pValueAtDetection": 1
+    },
+    {
+      "multiplier": 2,
+      "targetCount": 5,
+      "detected": true,
+      "detectedAtStep": 1,
+      "detectionDelayMinutes": 2,
+      "pValueAtDetection": 0.00366
+    },
+    {
+      "multiplier": 3,
+      "targetCount": 5,
+      "detected": true,
+      "detectedAtStep": 1,
+      "detectionDelayMinutes": 2,
+      "pValueAtDetection": 0
+    },
+    {
+      "multiplier": 5,
+      "targetCount": 5,
+      "detected": true,
+      "detectedAtStep": 1,
+      "detectionDelayMinutes": 2,
+      "pValueAtDetection": 0
+    },
+    {
+      "multiplier": 10,
+      "targetCount": 10,
+      "detected": true,
+      "detectedAtStep": 1,
+      "detectionDelayMinutes": 1,
+      "pValueAtDetection": 0
+    }
+  ],
+  "baselineComparison": [
+    {
+      "Model": "Proposed Empirical Bayes Shrinkage Poisson Engine",
+      "Recall": "100.0%",
+      "FalseAlarmsPerDay": "0.000",
+      "AvgDetectionDelay": "1.80 min",
+      "LocationIndependent": "Yes (H3 Grid)"
+    },
+    {
+      "Model": "Fixed Count Threshold (Count >= 10)",
+      "Recall": "60.0%",
+      "FalseAlarmsPerDay": "0.450",
+      "AvgDetectionDelay": "4.80 min",
+      "LocationIndependent": "No (Dense Bias)"
+    },
+    {
+      "Model": "Moving Average / EWMA Engine",
+      "Recall": "72.5%",
+      "FalseAlarmsPerDay": "0.210",
+      "AvgDetectionDelay": "3.10 min",
+      "LocationIndependent": "Partial"
+    },
+    {
+      "Model": "Non-Shrunk Local Cell Baseline",
+      "Recall": "65.0%",
+      "FalseAlarmsPerDay": "0.820",
+      "AvgDetectionDelay": "2.60 min",
+      "LocationIndependent": "No (Cold-Start Failure)"
+    }
+  ],
+  "lambdaSearch": [
+    {
+      "lambda": 0.05,
+      "noiseFinalPriority": 0.49,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": true
+    },
+    {
+      "lambda": 0.1,
+      "noiseFinalPriority": 0.54,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": true
+    },
+    {
+      "lambda": 0.15,
+      "noiseFinalPriority": 0.59,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": true
+    },
+    {
+      "lambda": 0.2,
+      "noiseFinalPriority": 0.64,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": true
+    },
+    {
+      "lambda": 0.25,
+      "noiseFinalPriority": 0.69,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": true
+    },
+    {
+      "lambda": 0.3,
+      "noiseFinalPriority": 0.74,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": false
+    },
+    {
+      "lambda": 0.4,
+      "noiseFinalPriority": 0.84,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": false
+    },
+    {
+      "lambda": 0.5,
+      "noiseFinalPriority": 0.94,
+      "gasFinalPriority": 0.7,
+      "gasLeakOutranksNoise": false
+    }
+  ]
+}

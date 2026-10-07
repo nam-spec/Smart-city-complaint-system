@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 function SurgeHistory() {
   const [surges, setSurges] = useState([]);
@@ -13,12 +14,11 @@ function SurgeHistory() {
     try {
       setLoading(true);
       const url = statusFilter === "all" 
-        ? "/api/analytics/surges" 
-        : `/api/analytics/surges?status=${statusFilter}`;
-      const res = await fetch(url);
-      const data = await res.json();
-      if (data.success) {
-        setSurges(data.surges);
+        ? "/analytics/surges" 
+        : `/analytics/surges?status=${statusFilter}`;
+      const res = await api.get(url);
+      if (res.data && res.data.success) {
+        setSurges(res.data.surges);
       }
     } catch (err) {
       console.error("Failed to fetch surges:", err);
@@ -35,20 +35,20 @@ function SurgeHistory() {
     try {
       setSimulating(true);
       setSimulateMsg(null);
-      const res = await fetch("/api/analytics/surges/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, lat: 19.0760, lng: 72.8777 })
+      const res = await api.post("/analytics/surges/simulate", {
+        category,
+        lat: 19.0760,
+        lng: 72.8777
       });
-      const data = await res.json();
-      if (data.success) {
-        setSimulateMsg({ type: "success", text: data.message });
+      if (res.data && res.data.success) {
+        setSimulateMsg({ type: "success", text: res.data.message });
         fetchSurges();
       } else {
-        setSimulateMsg({ type: "error", text: data.message || "Simulation failed" });
+        setSimulateMsg({ type: "error", text: res.data?.message || "Simulation failed" });
       }
     } catch (err) {
-      setSimulateMsg({ type: "error", text: "Network error simulating surge" });
+      console.error(err);
+      setSimulateMsg({ type: "error", text: err.response?.data?.message || "Error simulating surge" });
     } finally {
       setSimulating(false);
     }

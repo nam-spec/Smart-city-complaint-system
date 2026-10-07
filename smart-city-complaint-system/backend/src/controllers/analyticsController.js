@@ -147,3 +147,17 @@ exports.getMLExplainability = async (req, res) => {
     res.status(500).json({ message: "Failed to fetch ML explainability data" });
   }
 };
+
+exports.getSurgeBenchmark = async (req, res) => {
+  try {
+    const filePath = path.join(__dirname, "../../../ml/data/surge_benchmark_results.json");
+    if (fs.existsSync(filePath)) {
+      const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+      return res.status(200).json({ evaluated: true, ...data });
+    }
+    return res.status(200).json({ evaluated: false, message: "Not yet evaluated" });
+  } catch (error) {
+    console.error("Error loading surge benchmark:", error);
+    res.status(500).json({ evaluated: false, message: "Failed to load surge benchmark" });
+  }
+};

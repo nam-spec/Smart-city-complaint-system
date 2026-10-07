@@ -30,12 +30,12 @@ function ComplaintMap() {
   useEffect(() => {
     Promise.all([
       api.get("/complaints"),
-      fetch("/api/analytics/surges").then(res => res.json()).catch(() => ({ surges: [] }))
+      api.get("/analytics/surges").catch(() => ({ data: { surges: [] } }))
     ])
       .then(([compRes, surgeRes]) => {
         setComplaints(compRes.data);
-        if (surgeRes && surgeRes.surges) {
-          setSurges(surgeRes.surges);
+        if (surgeRes.data && surgeRes.data.surges) {
+          setSurges(surgeRes.data.surges);
         }
       })
       .catch((err) => console.error(err))

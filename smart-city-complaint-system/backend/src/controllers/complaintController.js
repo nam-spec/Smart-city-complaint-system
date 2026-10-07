@@ -3,6 +3,7 @@ const calculatePriority = require("../utils/priorityEngine").calculatePriority;
 const { evaluateAndUpdateSurgeLifecycle } = require("../utils/surgeEngine");
 const h3 = require("h3-js");
 const axios = require("axios");
+const path = require("path");
 
 exports.createComplaint = async (req, res) => {
   try {
@@ -23,16 +24,31 @@ exports.createComplaint = async (req, res) => {
 
     let category = "unclassified";
     let severityScore = 0.50; // fallback
+    let veracityData = {
+      is_fake: false,
+      veracity_score: 0.0,
+      veracity_status: "UNVERIFIED",
+      clip_visual_category: "unprocessed",
+      explanation: "ML service unavailable for cross-modal verification"
+    };
 
     try {
       const baseUrl = process.env.ML_SERVICE_URL || "http://localhost:5001/predict";
       const targetUrl = baseUrl.endsWith("/predict") ? baseUrl : `${baseUrl}/predict`;
       
-      console.log(`Sending ML prediction request to: ${targetUrl}`);
-      const mlResponse = await axios.post(targetUrl, { text: description });
+      const fullImagePath = req.file ? path.resolve(req.file.path) : null;
+
+      console.log(`Sending ML prediction & CLIP veracity request to: ${targetUrl}`);
+      const mlResponse = await axios.post(targetUrl, { 
+        text: description,
+        image_path: fullImagePath
+      });
 
       category = mlResponse.data.category || "unclassified";
       severityScore = parseFloat(mlResponse.data.severity_score) || 0.50;
+      if (mlResponse.data.veracity) {
+        veracityData = mlResponse.data.veracity;
+      }
     } catch (error) {
       console.error("ML service error:", error.message);
       console.log("ML service unavailable, using default category and severity");
@@ -80,7 +96,12 @@ exports.createComplaint = async (req, res) => {
       expectedCount: surgeInfo.expectedCount,
       pValue: surgeInfo.pValue,
       surgeStrength: surgeInfo.surgeStrength,
-      finalPriority
+      finalPriority,
+      isFake: veracityData.is_fake || false,
+      veracityScore: veracityData.veracity_score !== undefined ? veracityData.veracity_score : 1.0,
+      veracityStatus: veracityData.veracity_status || "VERIFIED",
+      veracityExplanation: veracityData.explanation || "",
+      clipVisualCategory: veracityData.clip_visual_category || category
     });
 
     res.status(201).json({
@@ -134,7 +155,6 @@ exports.updateComplaintStatus = async (req, res) => {
 
     complaint.status = status;
 
-    // If resolved, mark resolution time explicitly
     if (status === "Resolved") {
       complaint.resolvedAt = new Date();
     }

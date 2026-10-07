@@ -169,6 +169,7 @@ function AdminComplaints() {
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Lat, Lng Coordinates</th>
                   <th className="px-6 py-4">Final Queue Score</th>
+                  <th className="px-6 py-4">CLIP Veracity</th>
                   <th className="px-6 py-4">Submitted On</th>
                   <th className="px-6 py-4">Status & Action</th>
                 </tr>
@@ -176,7 +177,7 @@ function AdminComplaints() {
               <tbody className="divide-y divide-slate-100">
                 {filteredComplaints.length === 0 ? (
                   <tr>
-                    <td colSpan="7" className="text-center py-12 text-slate-450">
+                    <td colSpan="8" className="text-center py-12 text-slate-450">
                       No complaints matched the filter criteria
                     </td>
                   </tr>
@@ -236,6 +237,36 @@ function AdminComplaints() {
                             </span>
                           )}
                         </div>
+                      </td>
+
+                      {/* CLIP Veracity Status */}
+                      <td className="px-6 py-4">
+                        {c.isFake || c.veracityStatus === "FAKE_MISMATCH" ? (
+                          <span 
+                            title={c.veracityExplanation || "CLIP cross-modal image-text mismatch"}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 shadow-sm cursor-help inline-flex items-center gap-1"
+                          >
+                            <span>⚠️</span> FAKE / MISMATCH
+                          </span>
+                        ) : c.veracityStatus === "SUSPICIOUS" ? (
+                          <span 
+                            title={c.veracityExplanation || "CLIP low cross-modal similarity"}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 cursor-help inline-flex items-center gap-1"
+                          >
+                            <span>⚠️</span> SUSPICIOUS
+                          </span>
+                        ) : c.veracityStatus === "VERIFIED" ? (
+                          <span 
+                            title={`CLIP Similarity: ${((c.veracityScore || 1.0) * 100).toFixed(1)}% (${c.clipVisualCategory || c.category})`}
+                            className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-help inline-flex items-center gap-1"
+                          >
+                            <span>✓</span> VERIFIED
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400 bg-slate-100">
+                            UNVERIFIED
+                          </span>
+                        )}
                       </td>
 
                       {/* Date */}

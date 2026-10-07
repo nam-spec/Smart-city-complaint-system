@@ -1,6 +1,13 @@
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import api, { BACKEND_URL } from "../api/axios";
 import { Link } from "react-router-dom";
+
+const safeFormatNumber = (val, decimals = 2) => {
+  const num = Number(val);
+  if (isNaN(num)) return (0).toFixed(decimals);
+  return num.toFixed(decimals);
+};
 
 function Home() {
   const [complaints, setComplaints] = useState([]);
@@ -10,7 +17,7 @@ function Home() {
   useEffect(() => {
     api.get("/complaints")
       .then((res) => {
-        setComplaints(res.data);
+        setComplaints(res.data || []);
       })
       .catch((err) => console.error(err))
       .finally(() => setLoading(false));
@@ -22,19 +29,21 @@ function Home() {
   const resolved = complaints.filter(c => c.status === "Resolved").length;
 
   const getPriorityBadgeColor = (score) => {
-    if (score >= 0.75) return "bg-red-50 text-red-700 border-red-100";
-    if (score >= 0.45) return "bg-amber-50 text-amber-700 border-amber-100";
+    const num = Number(score) || 0;
+    if (num >= 0.75) return "bg-red-50 text-red-700 border-red-100";
+    if (num >= 0.45) return "bg-amber-50 text-amber-700 border-amber-100";
     return "bg-emerald-50 text-emerald-700 border-emerald-100";
   };
 
   const getPriorityText = (score) => {
-    if (score >= 0.75) return "Critical Priority";
-    if (score >= 0.45) return "Medium Priority";
+    const num = Number(score) || 0;
+    if (num >= 0.75) return "Critical Priority";
+    if (num >= 0.45) return "Medium Priority";
     return "Standard Priority";
   };
 
   return (
-    <div className="min-h-screen bg-slate-50/50 p-6 sm:p-8 font-sans animate-fade-in">
+    <div className="min-h-screen bg-slate-50/50 p-6 sm:p-8 font-sans">
 
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 bg-white border border-slate-200/80 p-6 rounded-2xl shadow-sm">
@@ -115,40 +124,43 @@ function Home() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {complaints.map((c) => (
-                  <tr 
-                    key={c._id} 
-                    onClick={() => setSelectedComplaint(c)}
-                    className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-200"
-                  >
-                    <td className="px-6 py-4.5 font-medium text-slate-800 max-w-sm truncate">
-                      {c.description}
-                    </td>
-                    <td className="px-6 py-4.5">
-                      <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
-                        {c.category}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4.5">
-                      <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getPriorityBadgeColor(c.priorityScoreS2)}`}>
-                        {c.priorityScoreS2?.toFixed(2)} - {getPriorityText(c.priorityScoreS2)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4.5">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
-                          c.status === "Resolved"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-100"
-                            : c.status === "In Progress"
-                            ? "bg-blue-50 text-blue-700 border-blue-100"
-                            : "bg-amber-50 text-amber-700 border-amber-100"
-                        }`}
-                      >
-                        {c.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                {complaints.map((c) => {
+                  const score = c.freshFinalPriority || c.finalPriority || c.priorityScoreS2 || 0;
+                  return (
+                    <tr 
+                      key={c._id} 
+                      onClick={() => setSelectedComplaint(c)}
+                      className="hover:bg-slate-50/80 cursor-pointer transition-colors duration-200"
+                    >
+                      <td className="px-6 py-4.5 font-medium text-slate-800 max-w-sm truncate">
+                        {c.title || c.description}
+                      </td>
+                      <td className="px-6 py-4.5">
+                        <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
+                          {c.category}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5">
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${getPriorityBadgeColor(score)}`}>
+                          {safeFormatNumber(score, 2)} - {getPriorityText(score)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4.5">
+                        <span
+                          className={`px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                            c.status === "Resolved"
+                              ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                              : c.status === "In Progress"
+                              ? "bg-blue-50 text-blue-700 border-blue-100"
+                              : "bg-amber-50 text-amber-700 border-amber-100"
+                          }`}
+                        >
+                          {c.status || "Pending"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -156,11 +168,16 @@ function Home() {
 
       </div>
 
-      {/* Details Modal */}
-      {selectedComplaint && (
-        <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
-          
-          <div className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-fade-in">
+      {/* Details Modal mounted to document.body via Portal */}
+      {selectedComplaint && createPortal(
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-4 z-[99999]"
+          onClick={() => setSelectedComplaint(null)}
+        >
+          <div 
+            className="bg-white border border-slate-200 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl my-auto relative z-[100000]"
+            onClick={(e) => e.stopPropagation()}
+          >
             
             {/* Modal Header */}
             <div className="px-6 py-4.5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
@@ -182,7 +199,7 @@ function Home() {
               <div className="space-y-1.5">
                 <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Report Description</span>
                 <p className="text-slate-800 text-sm leading-relaxed bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                  {selectedComplaint.description}
+                  {selectedComplaint.description || selectedComplaint.title}
                 </p>
               </div>
 
@@ -190,13 +207,13 @@ function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Spatio-Location Coordinates</span>
-                  <span className="text-xs text-slate-700 font-semibold block">Lat: {selectedComplaint.latitude?.toFixed(5)}</span>
-                  <span className="text-xs text-slate-700 font-semibold block">Lng: {selectedComplaint.longitude?.toFixed(5)}</span>
+                  <span className="text-xs text-slate-700 font-semibold block">Lat: {safeFormatNumber(selectedComplaint.latitude, 5)}</span>
+                  <span className="text-xs text-slate-700 font-semibold block">Lng: {safeFormatNumber(selectedComplaint.longitude, 5)}</span>
                 </div>
 
                 <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl space-y-1">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Model Classification</span>
-                  <span className="capitalize text-slate-800 font-bold block text-sm">{selectedComplaint.category}</span>
+                  <span className="capitalize text-slate-800 font-bold block text-sm">{selectedComplaint.category || "Unclassified"}</span>
                   <span className="text-[10px] text-slate-400">Classified using ML Pipeline</span>
                 </div>
               </div>
@@ -208,11 +225,11 @@ function Home() {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                   <div>
                     <span className="text-[10px] text-slate-400 block">Severity Score</span>
-                    <strong className="text-slate-700 text-sm">{(selectedComplaint.severityScore || 0).toFixed(2)}</strong>
+                    <strong className="text-slate-700 text-sm">{safeFormatNumber(selectedComplaint.severityScore, 2)}</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Spatial Density</span>
-                    <strong className="text-slate-700 text-sm">{selectedComplaint.spatialDensity || 0} pts</strong>
+                    <strong className="text-slate-700 text-sm">{selectedComplaint.spatialDensity || selectedComplaint.observedCount || 0} pts</strong>
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Temporal Density</span>
@@ -220,20 +237,87 @@ function Home() {
                   </div>
                   <div>
                     <span className="text-[10px] text-slate-400 block">Acceleration</span>
-                    <strong className="text-slate-700 text-sm">{(selectedComplaint.acceleration || 0).toFixed(2)}</strong>
+                    <strong className="text-slate-700 text-sm">{safeFormatNumber(selectedComplaint.acceleration, 2)}</strong>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 border-t pt-3 mt-1">
                   <div className="p-2.5 bg-indigo-50/40 rounded-xl">
                     <span className="text-[10px] text-indigo-500 font-semibold block">Stage-1 Priority Score (CV-Weighted)</span>
-                    <span className="text-lg font-black text-indigo-600">{(selectedComplaint.priorityScore || 0).toFixed(2)}</span>
+                    <span className="text-lg font-black text-indigo-600">{safeFormatNumber(selectedComplaint.priorityScore || selectedComplaint.priorityScoreS2, 2)}</span>
                   </div>
                   <div className="p-2.5 bg-violet-50/40 rounded-xl">
                     <span className="text-[10px] text-violet-500 font-semibold block">Stage-2 Rank (NDCG-Weighted)</span>
-                    <span className="text-lg font-black text-violet-600">{(selectedComplaint.priorityScoreS2 || 0).toFixed(2)}</span>
+                    <span className="text-lg font-black text-violet-600">{safeFormatNumber(selectedComplaint.freshFinalPriority || selectedComplaint.finalPriority || selectedComplaint.priorityScoreS2, 2)}</span>
                   </div>
                 </div>
+              </div>
+
+              {/* OpenAI CLIP Zero-Shot Veracity Verification Analysis */}
+              <div className={`border rounded-2xl p-5 space-y-3 ${
+                selectedComplaint.isFake || selectedComplaint.veracityStatus === "FAKE_MISMATCH"
+                  ? "bg-rose-50/50 border-rose-200"
+                  : selectedComplaint.veracityStatus === "SUSPICIOUS"
+                  ? "bg-amber-50/50 border-amber-200"
+                  : selectedComplaint.veracityStatus === "VERIFIED"
+                  ? "bg-emerald-50/40 border-emerald-200"
+                  : "bg-slate-50 border-slate-200"
+              }`}>
+                <div className="flex items-center justify-between border-b border-slate-200/60 pb-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">📸</span>
+                    <span className="text-xs font-black uppercase tracking-wider text-slate-800">
+                      OpenAI CLIP Zero-Shot Cross-Modal Verification
+                    </span>
+                  </div>
+                  {selectedComplaint.isFake || selectedComplaint.veracityStatus === "FAKE_MISMATCH" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-rose-600 text-white shadow-sm">
+                      ⚠️ FAKE / MISMATCH
+                    </span>
+                  ) : selectedComplaint.veracityStatus === "SUSPICIOUS" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500 text-white shadow-sm">
+                      ⚠️ SUSPICIOUS
+                    </span>
+                  ) : selectedComplaint.veracityStatus === "VERIFIED" ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-600 text-white shadow-sm">
+                      ✓ VERIFIED REAL
+                    </span>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-slate-200 text-slate-700 shadow-sm">
+                      UNVERIFIED (ML OFFLINE)
+                    </span>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                  <div className="bg-white/80 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Cross-Modal Similarity</span>
+                    <span className="text-base font-black text-slate-800">
+                      {selectedComplaint.veracityStatus === "UNVERIFIED" ? "N/A" : `${(Number(selectedComplaint.veracityScore || 0) * 100).toFixed(1)}%`}
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">CLIP Visual Category</span>
+                    <span className="text-sm font-bold capitalize text-slate-800">
+                      {selectedComplaint.clipVisualCategory || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="bg-white/80 p-3 rounded-xl border border-slate-100">
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Predicted Text Category</span>
+                    <span className="text-sm font-bold capitalize text-slate-800">
+                      {selectedComplaint.category || "Unclassified"}
+                    </span>
+                  </div>
+                </div>
+
+                {selectedComplaint.veracityExplanation && (
+                  <div className="text-xs text-slate-700 bg-white/90 p-3 rounded-xl border border-slate-200/80 font-medium">
+                    <strong className="text-slate-900 block text-[11px] mb-0.5">Verification Diagnostic Explanation:</strong>
+                    {selectedComplaint.veracityExplanation}
+                  </div>
+                )}
               </div>
 
               {/* Image & metadata */}
@@ -241,8 +325,8 @@ function Home() {
                 <div className="space-y-1.5">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Complaint Metadata</span>
                   <div className="text-xs text-slate-500 space-y-1">
-                    <div>Submitted: {new Date(selectedComplaint.createdAt).toLocaleString()}</div>
-                    <div>Status: <span className="font-semibold text-slate-700">{selectedComplaint.status}</span></div>
+                    <div>Submitted: {selectedComplaint.createdAt ? new Date(selectedComplaint.createdAt).toLocaleString() : "N/A"}</div>
+                    <div>Status: <span className="font-semibold text-slate-700">{selectedComplaint.status || "Pending"}</span></div>
                     {selectedComplaint.resolvedAt && (
                       <div>Resolved: {new Date(selectedComplaint.resolvedAt).toLocaleString()}</div>
                     )}
@@ -280,7 +364,8 @@ function Home() {
 
           </div>
 
-        </div>
+        </div>,
+        document.body
       )}
 
     </div>

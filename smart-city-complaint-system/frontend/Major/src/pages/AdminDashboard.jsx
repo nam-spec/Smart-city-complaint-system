@@ -102,12 +102,12 @@ export default function AdminDashboard() {
 
   const fetchDashboardData = async () => {
     try {
-      const [b, c, comp, avg, surges] = await Promise.all([
+      const [b, c, comp, avg, surgesRes] = await Promise.all([
         api.get("/analytics/basic"),
         api.get("/analytics/categories"),
         api.get("/complaints"),
         api.get("/analytics/avg-resolution-time"),
-        fetch("/api/analytics/surges?status=active").then(r => r.json()).catch(() => ({ surges: [] }))
+        api.get("/analytics/surges?status=active").catch(() => ({ data: { surges: [] } }))
       ]);
 
       setStats(b.data);
@@ -115,8 +115,8 @@ export default function AdminDashboard() {
       setComplaints(comp.data);
       setFilteredComplaints(comp.data);
       setAvgTime(avg.data.averageResolutionHours);
-      if (surges && surges.surges) {
-        setActiveSurges(surges.surges);
+      if (surgesRes.data && surgesRes.data.surges) {
+        setActiveSurges(surgesRes.data.surges);
       }
     } catch (err) {
       console.error("Dashboard data load error:", err);
@@ -164,13 +164,8 @@ export default function AdminDashboard() {
   const handleSimulateSurge = async () => {
     try {
       setSimulating(true);
-      const res = await fetch("/api/analytics/surges/simulate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category: "water", lat: 19.0760, lng: 72.8777 })
-      });
-      const data = await res.json();
-      if (data.success) {
+      const res = await api.post("/analytics/surges/simulate", { category: "water", lat: 19.0760, lng: 72.8777 });
+      if (res.data && res.data.success) {
         await fetchDashboardData();
       }
     } catch (err) {
@@ -241,7 +236,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
           <StatCard
             label="Total Grievances"
             value={stats?.total}
@@ -256,16 +251,22 @@ export default function AdminDashboard() {
             onClick={() => navigate("/admin/surges/history")}
           />
           <StatCard
-            label="Resolved Complaints"
+            label="Resolved"
             value={stats?.resolved}
             iconPath={Icons.resolved}
             accent="bg-gradient-to-tr from-emerald-500 to-emerald-600 shadow-emerald-500/20"
           />
           <StatCard
-            label="Pending Review"
+            label="Pending"
             value={stats?.pending}
             iconPath={Icons.pending}
             accent="bg-gradient-to-tr from-amber-500 to-amber-600 shadow-amber-500/20"
+          />
+          <StatCard
+            label="Fake / Mismatches"
+            value={complaints.filter(c => c.isFake || c.veracityStatus === "FAKE_MISMATCH").length}
+            iconPath="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            accent="bg-gradient-to-tr from-rose-600 to-pink-600 shadow-rose-600/20"
           />
           <StatCard
             label="Avg Resolution"
@@ -370,14 +371,21 @@ export default function AdminDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.finalPriority || c.priorityScoreS2)}`}>
-                          {(c.finalPriority || c.priorityScoreS2)?.toFixed(2)}
-                        </span>
-                        {c.surgeFlag && (
-                          <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
-                            🔥 SURGE
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-black border ${getPriorityColor(c.finalPriority || c.priorityScoreS2)}`}>
+                            {(c.finalPriority || c.priorityScoreS2)?.toFixed(2)}
                           </span>
-                        )}
+                          {c.surgeFlag && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-red-100 text-red-700 border border-red-200">
+                              🔥 SURGE
+                            </span>
+                          )}
+                          {(c.isFake || c.veracityStatus === "FAKE_MISMATCH") && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-extrabold bg-rose-100 text-rose-800 border border-rose-200">
+                              ⚠️ FAKE
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <select

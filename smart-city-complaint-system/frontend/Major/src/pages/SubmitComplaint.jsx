@@ -33,11 +33,10 @@ function SubmitComplaint() {
 
   useEffect(() => {
     // Check if any active surge exists
-    fetch("/api/analytics/surges?status=active")
-      .then(res => res.json())
-      .then(data => {
-        if (data.success && data.surges && data.surges.length > 0) {
-          const topSurge = data.surges[0];
+    api.get("/analytics/surges?status=active")
+      .then(res => {
+        if (res.data && res.data.success && res.data.surges && res.data.surges.length > 0) {
+          const topSurge = res.data.surges[0];
           setActiveSurgeNotice({
             category: topSurge.category,
             count: topSurge.complaintCount || 6
@@ -77,11 +76,16 @@ function SubmitComplaint() {
     formData.append("image", image);
 
     try {
-      await api.post("/complaints", formData, {
+      const res = await api.post("/complaints", formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      alert("Complaint submitted successfully! STSEP model priority has been calculated.");
+      const comp = res.data?.complaint;
+      const veracityMsg = comp
+        ? `\n\n[CLIP Cross-Modal Verification]: ${comp.veracityStatus || "VERIFIED"}\nVisual Category: ${comp.clipVisualCategory || comp.category}\nSimilarity Score: ${((comp.veracityScore !== undefined ? comp.veracityScore : 1.0) * 100).toFixed(1)}%\nExplanation: ${comp.veracityExplanation || "Image matches description"}`
+        : "";
+
+      alert(`Complaint submitted successfully! STSEP model priority calculated.${veracityMsg}`);
       setDescription("");
       setImage(null);
       setImagePreview(null);

@@ -4,6 +4,7 @@ import numpy as np
 import joblib
 from flask import Flask, request, jsonify
 from keywords import keyword_scores
+from clip_verifier import verify_image_veracity
 
 app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -141,9 +142,12 @@ def severity_for(text, category):
 @app.route("/", methods=["GET"])
 def index():
     return jsonify({
-        "status": "ML API is running",
+        "status": "ML API is running with OpenAI CLIP cross-modal veracity verification",
         "categories": CLASSES,
-        "endpoints": {"/predict": "POST {'text': '...'} -> category, confidence, severity_score"},
+        "endpoints": {
+            "/predict": "POST {'text': '...', 'image_path': '...'} -> category, veracity",
+            "/verify-veracity": "POST image file or image_path + category -> CLIP cross-modal veracity analysis"
+        },
     })
 
 
@@ -152,20 +156,73 @@ def predict():
     try:
         if pipeline is None:
             return jsonify({"error": "Model not trained. Run train.py first."}), 503
-        text = ((request.json or {}).get("text") or "").strip()
+
+        if request.is_json:
+            data = request.json or {}
+            text = (data.get("text") or "").strip()
+            image_path = data.get("image_path")
+            image_file = None
+        else:
+            text = (request.form.get("text") or "").strip()
+            image_path = request.form.get("image_path")
+            image_file = request.files.get("image")
+
         if not text:
             return jsonify({"error": "Text is required"}), 400
 
         category, confidence, top3, needs_manual_review = classify(text)
+        severity = round(severity_for(text, category), 4)
+
+        # Run CLIP Cross-Modal Veracity Verification if image provided
+        image_input = image_file or image_path
+        if image_input:
+            veracity_result = verify_image_veracity(image_input, category)
+        else:
+            veracity_result = {
+                "is_fake": False,
+                "veracity_score": 1.0,
+                "veracity_status": "VERIFIED",
+                "clip_visual_category": category,
+                "predicted_text_category": category,
+                "category_similarity": 1.0,
+                "explanation": "No image attached; text classification only."
+            }
+
         return jsonify({
             "category": category,
             "confidence": round(confidence, 4),
-            "needs_manual_review": needs_manual_review,
+            "needs_manual_review": needs_manual_review or veracity_result.get("is_fake", False),
             "top_predictions": top3,
-            "severity_score": round(severity_for(text, category), 4),
+            "severity_score": severity,
+            "veracity": veracity_result
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/verify-veracity", methods=["POST"])
+def verify_veracity():
+    try:
+        if request.is_json:
+            data = request.json or {}
+            text = data.get("text", "")
+            category = data.get("category", "")
+            image_input = data.get("image_path")
+        else:
+            text = request.form.get("text", "")
+            category = request.form.get("category", "")
+            image_input = request.files.get("image") or request.form.get("image_path")
+
+        if not category and text:
+            category, _, _, _ = classify(text)
+
+        veracity_res = verify_image_veracity(image_input, category)
+        return jsonify({
+            "success": True,
+            "veracity": veracity_res
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 if __name__ == "__main__":
