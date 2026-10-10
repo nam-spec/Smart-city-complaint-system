@@ -118,7 +118,9 @@ const complaintSchema = new mongoose.Schema(
 
     veracityStatus: {
       type: String,
-      enum: ["VERIFIED", "SUSPICIOUS", "FAKE_MISMATCH"],
+      // UNVERIFIED was returned by the ML service when CLIP was offline but was missing here,
+      // which made Complaint.create() throw and the submission fail with a 500.
+      enum: ["VERIFIED", "SUSPICIOUS", "FAKE_MISMATCH", "LIKELY_FAKE", "DUPLICATE", "UNVERIFIED"],
       default: "VERIFIED"
     },
 
@@ -131,6 +133,32 @@ const complaintSchema = new mongoose.Schema(
       type: String,
       default: ""
     },
+
+    // ---- Multilingual text understanding -------------------------------
+    language: { type: String, default: "" },            // en | hinglish | mr | hi | mr-latn | mixed
+    rootCauseCategory: { type: String, default: "" },   // department that must fix it
+    symptomCategory: { type: String, default: null },   // what the citizen sees, if different
+    causeText: { type: String, default: null },
+    englishGloss: { type: String, default: "" },
+    textConfidence: { type: Number, default: 0 },
+
+    // ---- Image understanding & authenticity ---------------------------
+    imageCategory: { type: String, default: null },
+    imageConfidence: { type: Number, default: null },
+    textImageMatch: { type: Number, default: null },     // 0..1 description <-> photo agreement
+    fakeRiskScore: { type: Number, default: 0 },         // 0..1 forensic risk
+    fakeSignals: [
+      {
+        _id: false,
+        code: String,
+        weight: Number,
+        message: String
+      }
+    ],
+    imageHash: { type: String, default: null, index: true },   // perceptual hash for re-use detection
+    duplicateOf: { type: mongoose.Schema.Types.ObjectId, ref: "Complaint", default: null },
+    needsManualReview: { type: Boolean, default: false, index: true },
+    priorityFactor: { type: Number, default: 1.0 },      // credibility multiplier applied to priority
 
     isSeeded: {
       type: Boolean,

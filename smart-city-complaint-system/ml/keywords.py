@@ -17,7 +17,7 @@ LEXICON = {
               "पानी", "पाणी", "नळ", "पिण्याचे पाणी", "paani", "pani nahi aara"],
     "drainage": ["sewage", "sewer", "drain", "gutter", "nala", "nullah", "culvert", "waterlog", "septic",
                  "manhole overflow", "stagnant", "flooding", "clogged", "choked", "गटार", "नाला", "सांडपाणी",
-                 "gutar", "gutar overflow", "nala jam", "वाहतूक", "तुंबले", "साचले", "saandpaani", "pani bhar"],
+                 "gutar", "gutar overflow", "nala jam", "तुंबले", "साचले", "saandpaani", "pani bhar"],
     "sanitation": ["garbage", "trash", "dustbin", "dumpster", "litter", "sweeper", "waste", "rubbish",
                    "carcass", "toilet", "dumping", "stink", "unhygienic", "filth", "कचरा", "घाण", "उकिरडा",
                    "कचऱ्याची", "कचरापेटी", "kachra", "kachra gaddi", "badboo", "साचला", "kuda", "gandagi"],
@@ -60,10 +60,12 @@ LEXICON = {
 def keyword_scores(text, categories):
     """Return a normalized vector (sums to 1, or all zeros if no keyword hit).
     Each category's hit count is capped at 2, so a long keyword list cannot dominate."""
-    import re
     import numpy as np
+    from text_normalizer import tokenize
     low = text.lower()
-    tokens = re.findall(r"[\w]+", low)
+    # NOTE: re.findall(r"\w+") splits Devanagari words at vowel signs ("गटार" -> "गट", "र"),
+    # so Marathi/Hindi keywords never matched. tokenize() keeps whole Devanagari words.
+    tokens = tokenize(low)
     hits = np.zeros(len(categories))
     for i, cat in enumerate(categories):
         n = 0

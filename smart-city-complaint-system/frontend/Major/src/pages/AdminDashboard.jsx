@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { complaintMatches } from "../utils/complaintSearch";
 import api from "../api/axios";
 import {
   BarChart,
@@ -135,9 +136,7 @@ export default function AdminDashboard() {
     let result = complaints;
 
     if (searchTerm) {
-      result = result.filter(c => 
-        (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      result = result.filter(c => complaintMatches(c, searchTerm));
     }
 
     if (categoryFilter !== "all") {
@@ -314,10 +313,10 @@ export default function AdminDashboard() {
               
               <input
                 type="text"
-                placeholder="Search description..."
+                placeholder="Search text, category, fake, marathi…"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                className="bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 transition-all w-44"
+                className="bg-white border border-slate-200 rounded-xl px-3.5 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 transition-all w-64"
               />
 
               <select

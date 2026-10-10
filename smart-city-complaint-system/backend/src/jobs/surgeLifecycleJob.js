@@ -4,6 +4,7 @@ const Surge = require("../models/Surge");
 const Complaint = require("../models/Complaint");
 const { poissonTail } = require("../utils/poissonMath");
 const { getShrunkBaseline } = require("../utils/priorityEngine");
+const { raiseAlert } = require("../utils/alertService");
 
 /**
  * Periodically checks all active surges (runs every 10 minutes)
@@ -24,7 +25,7 @@ async function processSurgeLifecycles() {
     try {
       const cells = h3.gridDisk(surge.cellId, 1);
       const recent = await Complaint.find(
-        { cellId: { $in: cells }, category: surge.category, createdAt: { $gte: tenMinutesAgo } },
+        { cellId: { $in: cells }, category: surge.category, createdAt: { $gte: tenMinutesAgo }, isFake: { $ne: true } },
         "citizen user"
       );
 
@@ -45,6 +46,19 @@ async function processSurgeLifecycles() {
           surge.status = "resolved";
           surge.resolvedAt = new Date();
           console.log(`[Surge Lifecycle Job] RESOLVED surge ${surge._id} after 2 quiet windows.`);
+          const mins = Math.round((Date.now() - new Date(surge.startedAt).getTime()) / 60000);
+          await raiseAlert({
+            type: "SURGE_RESOLVED",
+            level: "info",
+            title: `Surge resolved: ${surge.category}`,
+            message: `The ${surge.category} surge (${surge.complaintCount} complaints, ${surge.distinctUsers} citizens) ` +
+              `returned to normal after ${mins} minutes.`,
+            category: surge.category,
+            cellId: surge.cellId,
+            centroid: surge.centroid,
+            surgeId: surge._id,
+            metrics: { observed, expected, pValue: p, zScore: z }
+          }, { dedupKey: `resolved:${surge._id}`, cooldownMinutes: 1440 });
         }
       } else {
         surge.quietWindows = 0;

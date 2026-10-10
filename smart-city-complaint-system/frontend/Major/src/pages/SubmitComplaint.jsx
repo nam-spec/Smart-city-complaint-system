@@ -1,5 +1,17 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
+import { languageLabel, categoryLabel } from "../utils/labels";
+
+const VERDICT = {
+  VERIFIED: { text: "Photo verified - it matches your description.", cls: "bg-emerald-50 border-emerald-200 text-emerald-800", icon: "✅" },
+  UNVERIFIED: { text: "Photo received. Automatic photo check was not available; an officer will review it.", cls: "bg-slate-50 border-slate-200 text-slate-700", icon: "ℹ️" },
+  SUSPICIOUS: { text: "Your photo needs a manual check by an officer.", cls: "bg-amber-50 border-amber-200 text-amber-800", icon: "⚠️" },
+  FAKE_MISMATCH: { text: "The photo does not seem to match the description. The complaint will be reviewed manually.", cls: "bg-rose-50 border-rose-200 text-rose-800", icon: "⛔" },
+  LIKELY_FAKE: { text: "The photo appears edited, AI-generated or not recent. The complaint will be reviewed manually.", cls: "bg-rose-50 border-rose-200 text-rose-800", icon: "🚫" },
+  DUPLICATE: { text: "This photo was already used in another complaint. The complaint will be reviewed manually.", cls: "bg-fuchsia-50 border-fuchsia-200 text-fuchsia-800", icon: "♻️" }
+};
+
+const pretty = categoryLabel;
 
 function SubmitComplaint() {
   const [description, setDescription] = useState("");
@@ -10,6 +22,7 @@ function SubmitComplaint() {
   const [fetchingLocation, setFetchingLocation] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [activeSurgeNotice, setActiveSurgeNotice] = useState(null);
+  const [result, setResult] = useState(null);
 
   const getLocation = () => {
     setFetchingLocation(true);
@@ -80,18 +93,12 @@ function SubmitComplaint() {
         headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const comp = res.data?.complaint;
-      const veracityMsg = comp
-        ? `\n\n[CLIP Cross-Modal Verification]: ${comp.veracityStatus || "VERIFIED"}\nVisual Category: ${comp.clipVisualCategory || comp.category}\nSimilarity Score: ${((comp.veracityScore !== undefined ? comp.veracityScore : 1.0) * 100).toFixed(1)}%\nExplanation: ${comp.veracityExplanation || "Image matches description"}`
-        : "";
-
-      alert(`Complaint submitted successfully! STSEP model priority calculated.${veracityMsg}`);
+      setResult({ complaint: res.data?.complaint, analysis: res.data?.analysis || {} });
       setDescription("");
       setImage(null);
       setImagePreview(null);
       setLatitude(null);
       setLongitude(null);
-      window.location.href = "/";
     } catch (error) {
       console.error(error);
       alert("Submission failed. Please check backend status.");
@@ -99,6 +106,77 @@ function SubmitComplaint() {
       setSubmitting(false);
     }
   };
+
+  if (result) {
+    const c = result.complaint || {};
+    const a = result.analysis || {};
+    const status = a.veracityStatus || c.veracityStatus || "UNVERIFIED";
+    const v = VERDICT[status] || VERDICT.UNVERIFIED;
+    const signals = (a.fakeSignals || c.fakeSignals || []).filter(x => x.code !== "NO_CAMERA_DATA");
+    return (
+      <div className="min-h-[calc(100vh-70px)] bg-slate-50/50 p-4 sm:p-6 flex items-center justify-center font-sans">
+        <div className="bg-white border border-slate-200/80 shadow-xl rounded-3xl w-full max-w-2xl overflow-hidden">
+          <div className="px-6 py-5 border-b border-slate-100 bg-emerald-50/60">
+            <h1 className="text-xl font-extrabold text-slate-800">✅ Complaint registered</h1>
+            <p className="text-xs text-slate-500 mt-1">Reference ID: <span className="font-mono">{c._id}</span></p>
+          </div>
+          <div className="p-6 space-y-4 text-sm">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-slate-50 rounded-xl p-3">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Language</div>
+                <div className="font-semibold text-slate-800">{languageLabel(a.language || c.language) || "—"}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Root cause</div>
+                <div className="font-semibold text-slate-800 capitalize">{pretty(a.rootCause || c.category)}</div>
+                {a.symptom && <div className="text-[11px] text-slate-500 capitalize">symptom: {pretty(a.symptom)}</div>}
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Photo shows</div>
+                <div className="font-semibold text-slate-800 capitalize">{pretty(a.imageCategory || c.imageCategory)}</div>
+              </div>
+              <div className="bg-slate-50 rounded-xl p-3">
+                <div className="text-[10px] uppercase font-bold text-slate-400">Text-photo match</div>
+                <div className="font-semibold text-slate-800">
+                  {typeof a.textImageMatch === "number" ? `${(a.textImageMatch * 100).toFixed(0)}%` : "—"}
+                </div>
+              </div>
+            </div>
+
+            <div className={`border rounded-xl p-3 text-xs ${v.cls}`}>
+              <div className="font-bold">{v.icon} {v.text}</div>
+              {signals.length > 0 && (
+                <ul className="mt-2 space-y-1 list-disc list-inside">
+                  {signals.slice(0, 4).map((sig, i) => <li key={i}>{sig.message}</li>)}
+                </ul>
+              )}
+            </div>
+
+            {c.surgeFlag && (
+              <div className="border border-orange-200 bg-orange-50 text-orange-800 rounded-xl p-3 text-xs font-semibold">
+                📢 Many neighbours reported the same issue - this area is flagged as a surge and the municipal team has been alerted.
+              </div>
+            )}
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => { window.location.href = "/"; }}
+                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-wider cursor-pointer"
+              >
+                Back to home
+              </button>
+              <button
+                onClick={() => setResult(null)}
+                className="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-bold py-3 rounded-xl text-xs uppercase tracking-wider cursor-pointer"
+              >
+                Submit another
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-70px)] bg-slate-50/50 p-4 sm:p-6 flex items-center justify-center font-sans overflow-hidden">
@@ -145,7 +223,7 @@ function SubmitComplaint() {
                 Complaint Description
               </label>
               <textarea
-                placeholder="Provide clear details (e.g., 'Flooding due to water pipe burst near main street crossroads')"
+                placeholder="English, हिंदी, मराठी or Hinglish - e.g. 'Flooding due to water pipe burst near main street', 'gutar tumbla aahe', 'नाली जाम है'"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 required
@@ -241,8 +319,9 @@ function SubmitComplaint() {
 
               <div className="p-3.5 bg-slate-50 border border-slate-200/60 rounded-xl text-[11px] text-slate-500 space-y-1">
                 <span className="font-bold text-slate-700 block">Automatic Processing:</span>
-                <p>• Category ML prediction & severity scoring</p>
-                <p>• OpenAI CLIP cross-modal evidence verification</p>
+                <p>• Understands English, Hindi, Marathi & Hinglish</p>
+                <p>• Root-cause category & severity scoring</p>
+                <p>• Photo category check, description match & fake-image detection</p>
                 <p>• STSEP dynamic spatial-temporal priority ranking</p>
               </div>
 

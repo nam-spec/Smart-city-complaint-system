@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { complaintMatches } from "../utils/complaintSearch";
 import api, { BACKEND_URL } from "../api/axios";
+import VeracityBadge from "../components/VeracityBadge";
+import { languageLabel } from "../utils/labels";
 
 function AdminComplaints() {
   const [complaints, setComplaints] = useState([]);
@@ -8,6 +11,7 @@ function AdminComplaints() {
   const [searchTerm, setSearchTerm] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [evidenceFilter, setEvidenceFilter] = useState("all");
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -30,9 +34,7 @@ function AdminComplaints() {
     let result = complaints;
 
     if (searchTerm) {
-      result = result.filter(c => 
-        c.description.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+      result = result.filter(c => complaintMatches(c, searchTerm));
     }
 
     if (categoryFilter !== "all") {
@@ -43,9 +45,17 @@ function AdminComplaints() {
       result = result.filter(c => c.status === statusFilter);
     }
 
+    if (evidenceFilter === "flagged") {
+      result = result.filter(c => c.isFake || ["FAKE_MISMATCH", "LIKELY_FAKE", "DUPLICATE", "SUSPICIOUS"].includes(c.veracityStatus));
+    } else if (evidenceFilter === "review") {
+      result = result.filter(c => c.needsManualReview);
+    } else if (evidenceFilter === "verified") {
+      result = result.filter(c => c.veracityStatus === "VERIFIED");
+    }
+
     setFilteredComplaints(result);
     setCurrentPage(1);
-  }, [searchTerm, categoryFilter, statusFilter, complaints]);
+  }, [searchTerm, categoryFilter, statusFilter, evidenceFilter, complaints]);
 
   const handleStatusChange = (id, newStatus) => {
     api.patch(`/complaints/${id}/status`, { status: newStatus })
@@ -122,7 +132,7 @@ function AdminComplaints() {
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Search backlog</span>
             <input
               type="text"
-              placeholder="Search descriptions..."
+              placeholder="Search text, category, fake, marathi, status…"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
               className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-xs text-slate-800 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all w-64"
@@ -155,6 +165,20 @@ function AdminComplaints() {
                 <option value="Pending">Pending</option>
                 <option value="In Progress">In Progress</option>
                 <option value="Resolved">Resolved</option>
+              </select>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Evidence</span>
+              <select
+                value={evidenceFilter}
+                onChange={e => setEvidenceFilter(e.target.value)}
+                className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="all">All</option>
+                <option value="flagged">Flagged (fake / mismatch / re-used)</option>
+                <option value="review">Needs manual review</option>
+                <option value="verified">Verified only</option>
               </select>
             </div>
           </div>
@@ -220,9 +244,20 @@ function AdminComplaints() {
 
                           {/* Category */}
                           <td className="px-6 py-4">
-                            <span className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60">
-                              {c.category}
+                            <span
+                              title={c.causeText ? `Root cause: "${c.causeText}"` : "Root-cause category"}
+                              className="capitalize font-semibold text-xs px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200/60"
+                            >
+                              {String(c.rootCauseCategory || c.category).replace("_", " ")}
                             </span>
+                            {c.symptomCategory && (
+                              <div className="mt-1 text-[10px] text-slate-400">
+                                symptom: <span className="capitalize">{String(c.symptomCategory).replace("_", " ")}</span>
+                              </div>
+                            )}
+                            {c.language && c.language !== "en" && (
+                              <div className="mt-1 text-[10px] text-indigo-500 font-semibold">{languageLabel(c.language)}</div>
+                            )}
                           </td>
 
                           {/* Coordinates */}
@@ -247,34 +282,9 @@ function AdminComplaints() {
                             </div>
                           </td>
 
-                          {/* CLIP Veracity Status */}
+                          {/* Evidence: image category, text-image match, fake detection */}
                           <td className="px-6 py-4">
-                            {c.isFake || c.veracityStatus === "FAKE_MISMATCH" ? (
-                              <span 
-                                title={c.veracityExplanation || "CLIP cross-modal image-text mismatch"}
-                                className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-rose-100 text-rose-800 border border-rose-300 shadow-sm cursor-help inline-flex items-center gap-1"
-                              >
-                                <span>⚠️</span> FAKE / MISMATCH
-                              </span>
-                            ) : c.veracityStatus === "SUSPICIOUS" ? (
-                              <span 
-                                title={c.veracityExplanation || "CLIP low cross-modal similarity"}
-                                className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-50 text-amber-800 border border-amber-200 cursor-help inline-flex items-center gap-1"
-                              >
-                                <span>⚠️</span> SUSPICIOUS
-                              </span>
-                            ) : c.veracityStatus === "VERIFIED" ? (
-                              <span 
-                                title={`CLIP Similarity: ${((c.veracityScore || 1.0) * 100).toFixed(1)}% (${c.clipVisualCategory || c.category})`}
-                                className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-help inline-flex items-center gap-1"
-                              >
-                                <span>✓</span> VERIFIED
-                              </span>
-                            ) : (
-                              <span className="px-2 py-0.5 rounded-full text-[10px] text-slate-400 bg-slate-100">
-                                UNVERIFIED
-                              </span>
-                            )}
+                            <VeracityBadge complaint={c} />
                           </td>
 
                           {/* Date */}

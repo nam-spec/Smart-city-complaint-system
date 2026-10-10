@@ -3,7 +3,10 @@ import random
 import numpy as np
 import pandas as pd
 import joblib
+import json
 from keywords import LEXICON
+from multilingual_corpus import MULTILINGUAL_CORPUS
+from text_normalizer import augment_for_model
 from sklearn.pipeline import Pipeline, FeatureUnion
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
@@ -339,15 +342,37 @@ print("=" * 70)
 print("Smart City Complaint Classifier - balanced training")
 print("=" * 70)
 
+MULTI_HELD_OUT = 2           # multilingual phrases per category held out for the test split
+MULTI_SHARE = 0.30           # share of each category's samples drawn from Hinglish/Marathi/Hindi phrases
+
+
+def build_multi(phrases, n):
+    rows = []
+    for _ in range(n):
+        p = random.choice(phrases)
+        words = p.split()
+        if len(words) > 5:
+            words = [w for w in words if random.random() > 0.12] or p.split()
+        rows.append(" ".join(words))
+    return rows
+
+
 train_rows, test_rows = [], []
 for cat, phrases in CORPUS.items():
     train_p, test_p = phrases[:-HELD_OUT_PER_CATEGORY], phrases[-HELD_OUT_PER_CATEGORY:]
-    for t in build(cat, train_p, SAMPLES_PER_CATEGORY):
+    multi = MULTILINGUAL_CORPUS.get(cat, [])
+    m_train, m_test = multi[:-MULTI_HELD_OUT], multi[-MULTI_HELD_OUT:]
+    n_multi = int(SAMPLES_PER_CATEGORY * MULTI_SHARE) if m_train else 0
+    for t in build(cat, train_p, SAMPLES_PER_CATEGORY - n_multi):
+        train_rows.append((t, cat))
+    for t in build_multi(m_train, n_multi):
         train_rows.append((t, cat))
     for p in test_p:                       # held-out phrases, unaugmented + light augmentation
         test_rows.append((p, cat))
         for _ in range(4):
             test_rows.append((augment(p), cat))
+    for p in m_test:
+        test_rows.append((p, cat))
 
 train_df = pd.DataFrame(train_rows, columns=["text", "category"])
 test_df = pd.DataFrame(test_rows, columns=["text", "category"])
@@ -360,9 +385,11 @@ pipeline = Pipeline([
     ])),
     ("clf", LogisticRegression(C=3.0, class_weight="balanced", max_iter=2000)),
 ])
-pipeline.fit(train_df["text"], train_df["category"])
+# The classifier sees the normalised text + its English gloss (see text_normalizer.py),
+# exactly as app.py feeds it at prediction time.
+pipeline.fit(train_df["text"].map(augment_for_model), train_df["category"])
 
-pred = pipeline.predict(test_df["text"])
+pred = pipeline.predict(test_df["text"].map(augment_for_model))
 print("\n" + "=" * 70)
 print("Evaluation on HELD-OUT complaint phrases (never seen in training)")
 print("=" * 70)
@@ -395,7 +422,7 @@ print("Independent sanity checks")
 print("=" * 70)
 ok = 0
 for text, exp in CHECKS:
-    proba = pipeline.predict_proba([text])[0]
+    proba = pipeline.predict_proba([augment_for_model(text)])[0]
     p = pipeline.classes_[proba.argmax()]
     ok += p == exp
     print(f"[{'PASS' if p == exp else 'FAIL'}] pred={p:<17} conf={proba.max():.2f} exp={exp:<17} | {text}")
@@ -404,9 +431,12 @@ print(f"\n{ok}/{len(CHECKS)} passed")
 # Final model: refit on ALL phrases (including the held-out ones) for deployment
 final_rows = []
 for cat, phrases in CORPUS.items():
-    final_rows += [(t, cat) for t in build(cat, phrases, SAMPLES_PER_CATEGORY)]
+    multi = MULTILINGUAL_CORPUS.get(cat, [])
+    n_multi = int(SAMPLES_PER_CATEGORY * MULTI_SHARE) if multi else 0
+    final_rows += [(t, cat) for t in build(cat, phrases, SAMPLES_PER_CATEGORY - n_multi)]
+    final_rows += [(t, cat) for t in build_multi(multi, n_multi)]
 final_df = pd.DataFrame(final_rows, columns=["text", "category"])
-pipeline.fit(final_df["text"], final_df["category"])
+pipeline.fit(final_df["text"].map(augment_for_model), final_df["category"])
 print("\nRefit final model on all phrases.")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -414,3 +444,10 @@ MODEL_DIR = os.path.join(BASE_DIR, "model")
 os.makedirs(MODEL_DIR, exist_ok=True)
 joblib.dump(pipeline, os.path.join(MODEL_DIR, "pipeline.pkl"))
 print(f"\nSaved pipeline to {os.path.join(MODEL_DIR, 'pipeline.pkl')}")
+
+# Prototype phrases for the multilingual sentence encoder in app.py (nearest-prototype scoring).
+prototypes = [{"text": p, "category": c} for c, ps in CORPUS.items() for p in ps]
+prototypes += [{"text": p, "category": c} for c, ps in MULTILINGUAL_CORPUS.items() for p in ps]
+with open(os.path.join(MODEL_DIR, "prototypes.json"), "w", encoding="utf-8") as f:
+    json.dump({"preprocess": "augment_for_model_v1", "prototypes": prototypes}, f, ensure_ascii=False, indent=1)
+print(f"Saved {len(prototypes)} encoder prototypes to model/prototypes.json")

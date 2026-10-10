@@ -1,0 +1,1501 @@
+{
+ "preprocess": "augment_for_model_v1",
+ "prototypes": [
+  {
+   "text": "fire outbreak in building with smoke and flames rising",
+   "category": "fire"
+  },
+  {
+   "text": "shop caught fire blaze spreading rapidly",
+   "category": "fire"
+  },
+  {
+   "text": "transformer caught fire with loud explosion and sparks",
+   "category": "fire"
+  },
+  {
+   "text": "gas cylinder blast in kitchen house is burning",
+   "category": "fire"
+  },
+  {
+   "text": "vehicle burning fiercely on highway",
+   "category": "fire"
+  },
+  {
+   "text": "garbage dump on fire toxic smoke filling area",
+   "category": "fire"
+  },
+  {
+   "text": "factory chemical storage burning need fire brigade",
+   "category": "fire"
+  },
+  {
+   "text": "dense black smoke in staircase residents trapped",
+   "category": "fire"
+  },
+  {
+   "text": "warehouse burning uncontrollably",
+   "category": "fire"
+  },
+  {
+   "text": "flames coming out of apartment balcony",
+   "category": "fire"
+  },
+  {
+   "text": "dry grass fire spreading near houses",
+   "category": "fire"
+  },
+  {
+   "text": "fire emergency send fire tender immediately",
+   "category": "fire"
+  },
+  {
+   "text": "smoke pouring out of basement parking",
+   "category": "fire"
+  },
+  {
+   "text": "godown ablaze firefighters needed",
+   "category": "fire"
+  },
+  {
+   "text": "strong gas leakage smell from underground pipe",
+   "category": "gas"
+  },
+  {
+   "text": "lpg cylinder leaking in kitchen",
+   "category": "gas"
+  },
+  {
+   "text": "pngas pipeline leak near restaurant",
+   "category": "gas"
+  },
+  {
+   "text": "gas line punctured during road digging gas escaping",
+   "category": "gas"
+  },
+  {
+   "text": "gas regulator hissing high pressure leak",
+   "category": "gas"
+  },
+  {
+   "text": "commercial cylinder valve leaking in hotel kitchen",
+   "category": "gas"
+  },
+  {
+   "text": "gas smell in building basement",
+   "category": "gas"
+  },
+  {
+   "text": "industrial gas leakage evacuation required",
+   "category": "gas"
+  },
+  {
+   "text": "smell of cooking gas in the whole staircase",
+   "category": "gas"
+  },
+  {
+   "text": "toxic fumes causing nausea and eye irritation from factory",
+   "category": "gas"
+  },
+  {
+   "text": "cng pipeline joint leaking at petrol pump",
+   "category": "gas"
+  },
+  {
+   "text": "rotten egg smell of gas outside our society",
+   "category": "gas"
+  },
+  {
+   "text": "gas meter leaking near my flat",
+   "category": "gas"
+  },
+  {
+   "text": "suspected methane leak in the lane",
+   "category": "gas"
+  },
+  {
+   "text": "power cut in our area for three hours",
+   "category": "electric"
+  },
+  {
+   "text": "electricity outage without notice",
+   "category": "electric"
+  },
+  {
+   "text": "street lights not working whole road dark at night",
+   "category": "electric"
+  },
+  {
+   "text": "voltage fluctuation damaging home appliances",
+   "category": "electric"
+  },
+  {
+   "text": "electric pole wire sparking on sidewalk",
+   "category": "electric"
+  },
+  {
+   "text": "open junction box with exposed live wires",
+   "category": "electric"
+  },
+  {
+   "text": "frequent load shedding in colony",
+   "category": "electric"
+  },
+  {
+   "text": "street light flickering all night",
+   "category": "electric"
+  },
+  {
+   "text": "no current in building complete blackout",
+   "category": "electric"
+  },
+  {
+   "text": "hanging electric cables touching tree branches",
+   "category": "electric"
+  },
+  {
+   "text": "fuse blown at distribution box no electricity",
+   "category": "electric"
+  },
+  {
+   "text": "low voltage lights dim and fans slow",
+   "category": "electric"
+  },
+  {
+   "text": "electric meter tripping again and again",
+   "category": "electric"
+  },
+  {
+   "text": "lamp post bulb fused near bus stop",
+   "category": "electric"
+  },
+  {
+   "text": "no drinking water supply since morning",
+   "category": "water"
+  },
+  {
+   "text": "main water pipeline burst flooding street",
+   "category": "water"
+  },
+  {
+   "text": "clean water leaking from municipal pipe",
+   "category": "water"
+  },
+  {
+   "text": "contaminated brown water from tap with foul smell",
+   "category": "water"
+  },
+  {
+   "text": "very low water pressure no water in tank",
+   "category": "water"
+  },
+  {
+   "text": "water tanker required pump at booster station failed",
+   "category": "water"
+  },
+  {
+   "text": "tap running dry municipal valve closed",
+   "category": "water"
+  },
+  {
+   "text": "no municipal water supply for two days",
+   "category": "water"
+  },
+  {
+   "text": "water gushing from broken fire hydrant",
+   "category": "water"
+  },
+  {
+   "text": "drinking water pipeline damaged during road work",
+   "category": "water"
+  },
+  {
+   "text": "dirty muddy tap water health risk",
+   "category": "water"
+  },
+  {
+   "text": "water supply timing irregular in our building",
+   "category": "water"
+  },
+  {
+   "text": "water meter reading wrong bill too high",
+   "category": "water"
+  },
+  {
+   "text": "water line valve stuck colony has water crisis",
+   "category": "water"
+  },
+  {
+   "text": "sewage overflow on the street",
+   "category": "drainage"
+  },
+  {
+   "text": "storm water drain clogged flooding roads",
+   "category": "drainage"
+  },
+  {
+   "text": "drain blocked water logging near my house",
+   "category": "drainage"
+  },
+  {
+   "text": "sewer line choked dirty water entering bathroom",
+   "category": "drainage"
+  },
+  {
+   "text": "open nala overflowing after rain",
+   "category": "drainage"
+  },
+  {
+   "text": "manhole overflowing with sewage water",
+   "category": "drainage"
+  },
+  {
+   "text": "drainage water backing up into ground floor",
+   "category": "drainage"
+  },
+  {
+   "text": "gutter blocked and dirty water stagnating",
+   "category": "drainage"
+  },
+  {
+   "text": "sewer smell and leakage from broken drain pipe",
+   "category": "drainage"
+  },
+  {
+   "text": "waterlogging in the underpass after light rain",
+   "category": "drainage"
+  },
+  {
+   "text": "chamber overflow near school sewage on road",
+   "category": "drainage"
+  },
+  {
+   "text": "clogged culvert causing flooding in lane",
+   "category": "drainage"
+  },
+  {
+   "text": "septic waste flowing on public road",
+   "category": "drainage"
+  },
+  {
+   "text": "rainwater not draining from society compound",
+   "category": "drainage"
+  },
+  {
+   "text": "garbage overflowing at street corner stinking",
+   "category": "sanitation"
+  },
+  {
+   "text": "trash not collected for four days",
+   "category": "sanitation"
+  },
+  {
+   "text": "dead animal carcass lying on road",
+   "category": "sanitation"
+  },
+  {
+   "text": "illegal dumping of waste on empty plot",
+   "category": "sanitation"
+  },
+  {
+   "text": "public dustbin broken garbage scattered",
+   "category": "sanitation"
+  },
+  {
+   "text": "waste accumulating near market unhygienic",
+   "category": "sanitation"
+  },
+  {
+   "text": "sweeper has not cleaned the street",
+   "category": "sanitation"
+  },
+  {
+   "text": "rotting waste emitting foul odor and flies",
+   "category": "sanitation"
+  },
+  {
+   "text": "construction debris dumped on sidewalk",
+   "category": "sanitation"
+  },
+  {
+   "text": "dumpster overflowing near school entrance",
+   "category": "sanitation"
+  },
+  {
+   "text": "garbage truck skipping our lane",
+   "category": "sanitation"
+  },
+  {
+   "text": "public toilet dirty and unusable",
+   "category": "sanitation"
+  },
+  {
+   "text": "sanitary waste thrown openly on road",
+   "category": "sanitation"
+  },
+  {
+   "text": "litter and plastic bags all over the street",
+   "category": "sanitation"
+  },
+  {
+   "text": "deep pothole on main road causing accidents",
+   "category": "road"
+  },
+  {
+   "text": "broken asphalt with loose gravel",
+   "category": "road"
+  },
+  {
+   "text": "open uncovered manhole on road hazard for two wheelers",
+   "category": "road"
+  },
+  {
+   "text": "sinkhole forming in middle of street",
+   "category": "road"
+  },
+  {
+   "text": "speed breaker damaged and unpainted",
+   "category": "road"
+  },
+  {
+   "text": "craters on road after heavy rain",
+   "category": "road"
+  },
+  {
+   "text": "road digging left incomplete uneven surface",
+   "category": "road"
+  },
+  {
+   "text": "road divider collapsed damaging tyres",
+   "category": "road"
+  },
+  {
+   "text": "huge ditches and bumps on the street",
+   "category": "road"
+  },
+  {
+   "text": "tar peeled off at busy junction road bumpy",
+   "category": "road"
+  },
+  {
+   "text": "footpath tiles broken pedestrians tripping",
+   "category": "road"
+  },
+  {
+   "text": "road surface eroded iron rods exposed",
+   "category": "road"
+  },
+  {
+   "text": "missing manhole cover on carriageway",
+   "category": "road"
+  },
+  {
+   "text": "newly laid road already cracked and caved in",
+   "category": "road"
+  },
+  {
+   "text": "illegal parking on both sides blocking two lanes",
+   "category": "traffic"
+  },
+  {
+   "text": "traffic signal not working causing jam",
+   "category": "traffic"
+  },
+  {
+   "text": "abandoned vehicle parked on footpath for months",
+   "category": "traffic"
+  },
+  {
+   "text": "car parked blocking my driveway",
+   "category": "traffic"
+  },
+  {
+   "text": "heavy congestion because of haphazard parking",
+   "category": "traffic"
+  },
+  {
+   "text": "wrong side driving near intersection",
+   "category": "traffic"
+  },
+  {
+   "text": "delivery trucks double parked blocking bus stop",
+   "category": "traffic"
+  },
+  {
+   "text": "signal blinking yellow chaos at junction",
+   "category": "traffic"
+  },
+  {
+   "text": "vehicles parked on zebra crossing",
+   "category": "traffic"
+  },
+  {
+   "text": "auto rickshaws stopping in middle of road jam",
+   "category": "traffic"
+  },
+  {
+   "text": "no traffic police at rush hour intersection gridlock",
+   "category": "traffic"
+  },
+  {
+   "text": "tempo blocking society gate",
+   "category": "traffic"
+  },
+  {
+   "text": "vehicles overspeeding in school zone",
+   "category": "traffic"
+  },
+  {
+   "text": "no parking zone violated daily at market",
+   "category": "traffic"
+  },
+  {
+   "text": "loud music late at night after midnight",
+   "category": "noise"
+  },
+  {
+   "text": "loudspeakers blaring disturbing sleep and study",
+   "category": "noise"
+  },
+  {
+   "text": "construction drilling noise at midnight",
+   "category": "noise"
+  },
+  {
+   "text": "constant honking and modified silencer noise",
+   "category": "noise"
+  },
+  {
+   "text": "factory machine noise in quiet residential area",
+   "category": "noise"
+  },
+  {
+   "text": "pub playing loud bass shaking walls",
+   "category": "noise"
+  },
+  {
+   "text": "neighbour's dogs barking all night",
+   "category": "noise"
+  },
+  {
+   "text": "generator noise running all night",
+   "category": "noise"
+  },
+  {
+   "text": "event using sound amplifiers without permission",
+   "category": "noise"
+  },
+  {
+   "text": "late night dj in open ground",
+   "category": "noise"
+  },
+  {
+   "text": "banging noise from workshop at 2 am",
+   "category": "noise"
+  },
+  {
+   "text": "wedding band playing loudly till late",
+   "category": "noise"
+  },
+  {
+   "text": "loud firecrackers bursting at night",
+   "category": "noise"
+  },
+  {
+   "text": "noisy party in the flat above us",
+   "category": "noise"
+  },
+  {
+   "text": "cracks on load bearing walls of the building",
+   "category": "housing"
+  },
+  {
+   "text": "balcony railing loose risk of falling",
+   "category": "housing"
+  },
+  {
+   "text": "ceiling plaster falling and dampness on walls",
+   "category": "housing"
+  },
+  {
+   "text": "broken window frames and damaged door in flat",
+   "category": "housing"
+  },
+  {
+   "text": "illegal modification on terrace weakening pillar",
+   "category": "housing"
+  },
+  {
+   "text": "corroded staircase railing and broken tiles",
+   "category": "housing"
+  },
+  {
+   "text": "building wall leaning dangerously",
+   "category": "housing"
+  },
+  {
+   "text": "seepage from ceiling damaging wiring",
+   "category": "housing"
+  },
+  {
+   "text": "paint and plaster peeling due to leakage",
+   "category": "housing"
+  },
+  {
+   "text": "foundation showing visible fissures unsafe structure",
+   "category": "housing"
+  },
+  {
+   "text": "lift in building not working for weeks",
+   "category": "housing"
+  },
+  {
+   "text": "dilapidated old building may collapse in monsoon",
+   "category": "housing"
+  },
+  {
+   "text": "society refuses to repair leaking roof",
+   "category": "housing"
+  },
+  {
+   "text": "slab of terrace has developed cracks",
+   "category": "housing"
+  },
+  {
+   "text": "huge tree uprooted blocking main road",
+   "category": "environment"
+  },
+  {
+   "text": "overgrown bushes blocking street light and view",
+   "category": "environment"
+  },
+  {
+   "text": "dead heavy branch dangling over school gate",
+   "category": "environment"
+  },
+  {
+   "text": "unpruned park trees touching power lines",
+   "category": "environment"
+  },
+  {
+   "text": "fallen tree trunk crushed parked car",
+   "category": "environment"
+  },
+  {
+   "text": "trees being cut illegally in the garden",
+   "category": "environment"
+  },
+  {
+   "text": "public park neglected grass overgrown",
+   "category": "environment"
+  },
+  {
+   "text": "playground equipment broken in garden",
+   "category": "environment"
+  },
+  {
+   "text": "lake surface covered with weeds and hyacinth",
+   "category": "environment"
+  },
+  {
+   "text": "tree cutting without permission near society",
+   "category": "environment"
+  },
+  {
+   "text": "branches fell on road after storm",
+   "category": "environment"
+  },
+  {
+   "text": "no maintenance of green belt along highway",
+   "category": "environment"
+  },
+  {
+   "text": "garden benches broken and lights off in park",
+   "category": "environment"
+  },
+  {
+   "text": "sapling plantation needed along the road",
+   "category": "environment"
+  },
+  {
+   "text": "thick black smoke from factory chimney polluting air",
+   "category": "pollution"
+  },
+  {
+   "text": "burning of plastic and rubbish causing air pollution",
+   "category": "pollution"
+  },
+  {
+   "text": "chemical effluent discharged into river",
+   "category": "pollution"
+  },
+  {
+   "text": "dust from construction site covering houses",
+   "category": "pollution"
+  },
+  {
+   "text": "foul smelling chemical odor from industrial unit",
+   "category": "pollution"
+  },
+  {
+   "text": "air quality very poor breathing problem",
+   "category": "pollution"
+  },
+  {
+   "text": "oil spill and industrial waste in the nala",
+   "category": "pollution"
+  },
+  {
+   "text": "open burning of leaves choking the neighborhood",
+   "category": "pollution"
+  },
+  {
+   "text": "river water turned black from untreated discharge",
+   "category": "pollution"
+  },
+  {
+   "text": "cement plant dust making air unbreathable",
+   "category": "pollution"
+  },
+  {
+   "text": "fumes from illegal dye unit near homes",
+   "category": "pollution"
+  },
+  {
+   "text": "smog and vehicle emissions near the highway",
+   "category": "pollution"
+  },
+  {
+   "text": "toxic foam floating on the lake",
+   "category": "pollution"
+  },
+  {
+   "text": "crematorium smoke drifting into homes",
+   "category": "pollution"
+  },
+  {
+   "text": "stray dogs attacking pedestrians",
+   "category": "animals"
+  },
+  {
+   "text": "pack of street dogs chasing children",
+   "category": "animals"
+  },
+  {
+   "text": "stray cattle sitting on the road",
+   "category": "animals"
+  },
+  {
+   "text": "monkeys entering houses and snatching food",
+   "category": "animals"
+  },
+  {
+   "text": "cow blocking the lane and roaming freely",
+   "category": "animals"
+  },
+  {
+   "text": "snake found inside the housing society",
+   "category": "animals"
+  },
+  {
+   "text": "dog bite incident need animal catcher",
+   "category": "animals"
+  },
+  {
+   "text": "wild boar roaming near the colony",
+   "category": "animals"
+  },
+  {
+   "text": "stray bulls fighting on the main road",
+   "category": "animals"
+  },
+  {
+   "text": "pigeon droppings and dead birds in the building",
+   "category": "animals"
+  },
+  {
+   "text": "stray dogs barking and biting at night",
+   "category": "animals"
+  },
+  {
+   "text": "buffaloes left on public road by owners",
+   "category": "animals"
+  },
+  {
+   "text": "beehive on the school building",
+   "category": "animals"
+  },
+  {
+   "text": "injured stray animal needs rescue",
+   "category": "animals"
+  },
+  {
+   "text": "bus not arriving on time on our route",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus stop shelter broken no seating",
+   "category": "public_transport"
+  },
+  {
+   "text": "auto rickshaw drivers refusing to go by meter",
+   "category": "public_transport"
+  },
+  {
+   "text": "overcrowded local bus service too few buses",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus driver rash driving passengers scared",
+   "category": "public_transport"
+  },
+  {
+   "text": "metro station escalator not working",
+   "category": "public_transport"
+  },
+  {
+   "text": "railway station foot over bridge in poor condition",
+   "category": "public_transport"
+  },
+  {
+   "text": "taxi overcharging and refusing passengers",
+   "category": "public_transport"
+  },
+  {
+   "text": "no bus service to our new sector",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus conductor misbehaved with passengers",
+   "category": "public_transport"
+  },
+  {
+   "text": "cancelled buses no information at the depot",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus stop has no route board or lighting",
+   "category": "public_transport"
+  },
+  {
+   "text": "shuttle service stopped without notice",
+   "category": "public_transport"
+  },
+  {
+   "text": "ticket machine at station out of order",
+   "category": "public_transport"
+  },
+  {
+   "text": "hawkers occupying footpath entirely",
+   "category": "encroachment"
+  },
+  {
+   "text": "illegal shops built on public land",
+   "category": "encroachment"
+  },
+  {
+   "text": "unauthorized construction on government plot",
+   "category": "encroachment"
+  },
+  {
+   "text": "shopkeeper extended shed onto the road",
+   "category": "encroachment"
+  },
+  {
+   "text": "encroachment on the drain path by houses",
+   "category": "encroachment"
+  },
+  {
+   "text": "illegal hoarding put up without permission",
+   "category": "encroachment"
+  },
+  {
+   "text": "temporary stalls blocking pedestrian walkway",
+   "category": "encroachment"
+  },
+  {
+   "text": "builder occupying the common open space",
+   "category": "encroachment"
+  },
+  {
+   "text": "illegal slum expansion on park land",
+   "category": "encroachment"
+  },
+  {
+   "text": "road narrowed by unauthorised structure",
+   "category": "encroachment"
+  },
+  {
+   "text": "fruit carts taking over entire pavement",
+   "category": "encroachment"
+  },
+  {
+   "text": "wall built over public access lane",
+   "category": "encroachment"
+  },
+  {
+   "text": "illegal banners and posters on public property",
+   "category": "encroachment"
+  },
+  {
+   "text": "shop goods displayed on the footpath",
+   "category": "encroachment"
+  },
+  {
+   "text": "chain snatching incidents in our lane",
+   "category": "public_safety"
+  },
+  {
+   "text": "group of drunk men harassing women near station",
+   "category": "public_safety"
+  },
+  {
+   "text": "theft and burglary in the colony no patrolling",
+   "category": "public_safety"
+  },
+  {
+   "text": "no cctv cameras in the crowded market",
+   "category": "public_safety"
+  },
+  {
+   "text": "street is unsafe at night no police presence",
+   "category": "public_safety"
+  },
+  {
+   "text": "gambling and drug dealing near the school",
+   "category": "public_safety"
+  },
+  {
+   "text": "eve teasing outside college gate",
+   "category": "public_safety"
+  },
+  {
+   "text": "suspicious people loitering around the society",
+   "category": "public_safety"
+  },
+  {
+   "text": "vehicle theft reported repeatedly in the area",
+   "category": "public_safety"
+  },
+  {
+   "text": "fight and violence on the street every night",
+   "category": "public_safety"
+  },
+  {
+   "text": "women feel unsafe in the dark subway",
+   "category": "public_safety"
+  },
+  {
+   "text": "bike thieves active in parking",
+   "category": "public_safety"
+  },
+  {
+   "text": "street lights and police patrol needed to stop crime",
+   "category": "public_safety"
+  },
+  {
+   "text": "illegal liquor den operating in the neighborhood",
+   "category": "public_safety"
+  },
+  {
+   "text": "mosquito breeding in stagnant water dengue cases rising",
+   "category": "health"
+  },
+  {
+   "text": "outbreak of diarrhea in the locality",
+   "category": "health"
+  },
+  {
+   "text": "malaria cases reported need fumigation",
+   "category": "health"
+  },
+  {
+   "text": "no doctor at the government health center",
+   "category": "health"
+  },
+  {
+   "text": "medicines unavailable at the public hospital",
+   "category": "health"
+  },
+  {
+   "text": "ambulance took too long to arrive",
+   "category": "health"
+  },
+  {
+   "text": "hospital waste dumped outside clinic",
+   "category": "health"
+  },
+  {
+   "text": "food stalls selling stale unhygienic food",
+   "category": "health"
+  },
+  {
+   "text": "fogging needed against mosquitoes",
+   "category": "health"
+  },
+  {
+   "text": "rats and pests infestation in the market",
+   "category": "health"
+  },
+  {
+   "text": "vaccination camp not organised in our ward",
+   "category": "health"
+  },
+  {
+   "text": "unhygienic slaughterhouse spreading disease",
+   "category": "health"
+  },
+  {
+   "text": "primary health center dirty and understaffed",
+   "category": "health"
+  },
+  {
+   "text": "typhoid cases due to contaminated food",
+   "category": "health"
+  },
+  {
+   "text": "dukaan me aag lag gayi hai fire brigade bhejo",
+   "category": "fire"
+  },
+  {
+   "text": "building ke upar wale flat se aag ki lapte dikh rahi hai",
+   "category": "fire"
+  },
+  {
+   "text": "kachre ke dher me aag lagi hai dhua phail raha hai",
+   "category": "fire"
+  },
+  {
+   "text": "इमारतीच्या तिसऱ्या मजल्यावर आग लागली आहे",
+   "category": "fire"
+  },
+  {
+   "text": "गोदामाला आग लागली असून धूर पसरला आहे",
+   "category": "fire"
+  },
+  {
+   "text": "बिल्डिंग में आग लगी है लोग फंसे हुए हैं",
+   "category": "fire"
+  },
+  {
+   "text": "गाड़ी में अचानक आग लग गई",
+   "category": "fire"
+  },
+  {
+   "text": "dukanala aag lagli aahe lavkar ya",
+   "category": "fire"
+  },
+  {
+   "text": "ghar me cylinder se gas leak ho rahi hai",
+   "category": "gas"
+  },
+  {
+   "text": "gali me pipeline se gas ki badboo aa rahi hai",
+   "category": "gas"
+  },
+  {
+   "text": "hotel ke kitchen me gas leak hai sab dar gaye hain",
+   "category": "gas"
+  },
+  {
+   "text": "स्वयंपाकघरात सिलेंडरमधून गॅस गळती होत आहे",
+   "category": "gas"
+  },
+  {
+   "text": "सोसायटीच्या पाईपलाईनमधून गॅसचा वास येतोय",
+   "category": "gas"
+  },
+  {
+   "text": "सिलेंडर लीक हो रहा है गैस की गंध आ रही है",
+   "category": "gas"
+  },
+  {
+   "text": "ज़मीन के नीचे की गैस लाइन फट गई है",
+   "category": "gas"
+  },
+  {
+   "text": "gharat gas cha vaas yetoy cylinder leak aahe",
+   "category": "gas"
+  },
+  {
+   "text": "subah se bijli nahi hai poora area andhere me hai",
+   "category": "electric"
+  },
+  {
+   "text": "street light kharab hai raat ko andhera rehta hai",
+   "category": "electric"
+  },
+  {
+   "text": "transformer se chingariyan nikal rahi hain",
+   "category": "electric"
+  },
+  {
+   "text": "बिजली का तार सड़क पर गिरा हुआ है करंट का खतरा",
+   "category": "electric"
+  },
+  {
+   "text": "आमच्या भागात सकाळपासून वीज नाही",
+   "category": "electric"
+  },
+  {
+   "text": "रस्त्यावरचे दिवे बंद आहेत रात्री अंधार असतो",
+   "category": "electric"
+  },
+  {
+   "text": "डीपी मधून ठिणग्या उडत आहेत",
+   "category": "electric"
+  },
+  {
+   "text": "kal pasun vij nahi aahe sagla andhar",
+   "category": "electric"
+  },
+  {
+   "text": "do din se nal me paani nahi aa raha",
+   "category": "water"
+  },
+  {
+   "text": "paani ki supply bahut kam pressure me aati hai",
+   "category": "water"
+  },
+  {
+   "text": "nal se ganda aur badboodar paani aa raha hai",
+   "category": "water"
+  },
+  {
+   "text": "आमच्या इमारतीला पिण्याचे पाणी मिळत नाही",
+   "category": "water"
+  },
+  {
+   "text": "पाण्याची पाईपलाईन फुटली आहे पाणी वाया जात आहे",
+   "category": "water"
+  },
+  {
+   "text": "नल में पानी नहीं आ रहा टैंकर भेजो",
+   "category": "water"
+  },
+  {
+   "text": "पीने के पानी में कीड़े आ रहे हैं",
+   "category": "water"
+  },
+  {
+   "text": "nalala pani yet nahi tanker pathva",
+   "category": "water"
+  },
+  {
+   "text": "gutar ka paani ghar me ghus raha hai",
+   "category": "drainage"
+  },
+  {
+   "text": "nali choke ho gayi hai ganda paani sadak pe beh raha hai",
+   "category": "drainage"
+  },
+  {
+   "text": "baarish me har baar is gali me paani bhar jata hai",
+   "category": "drainage"
+  },
+  {
+   "text": "पावसामुळे गल्लीत गुडघाभर पाणी साचले आहे",
+   "category": "drainage"
+  },
+  {
+   "text": "ड्रेनेज लाईन फुटून घाण पाणी वाहत आहे",
+   "category": "drainage"
+  },
+  {
+   "text": "नाला ओवरफ्लो हो रहा है गंदा पानी घरों में",
+   "category": "drainage"
+  },
+  {
+   "text": "मैनहोल से सीवर का पानी बाहर निकल रहा है",
+   "category": "drainage"
+  },
+  {
+   "text": "gutar tumbale aahe ghaan pani rastyavar",
+   "category": "drainage"
+  },
+  {
+   "text": "kachra gaadi hafte bhar se nahi aayi",
+   "category": "sanitation"
+  },
+  {
+   "text": "gali me kuda pada hai koi uthata nahi",
+   "category": "sanitation"
+  },
+  {
+   "text": "kooda daan bhar gaya hai chaaron taraf gandagi",
+   "category": "sanitation"
+  },
+  {
+   "text": "रस्त्याच्या कडेला कचऱ्याचा ढीग साचला आहे",
+   "category": "sanitation"
+  },
+  {
+   "text": "कचरा उचलला जात नाही दुर्गंधी पसरली आहे",
+   "category": "sanitation"
+  },
+  {
+   "text": "सड़क किनारे कूड़े का ढेर लगा है बदबू आ रही है",
+   "category": "sanitation"
+  },
+  {
+   "text": "सफाई वाला कई दिन से नहीं आया",
+   "category": "sanitation"
+  },
+  {
+   "text": "ghantagadi yet nahi kachra sadat aahe",
+   "category": "sanitation"
+  },
+  {
+   "text": "sadak pe bahut gaddhe hain gaadi chalana mushkil",
+   "category": "road"
+  },
+  {
+   "text": "naya road ek mahine me hi toot gaya",
+   "category": "road"
+  },
+  {
+   "text": "road ki khudai karke chhod diya hai",
+   "category": "road"
+  },
+  {
+   "text": "रस्त्यावर मोठा खड्डा पडला आहे अपघात होऊ शकतो",
+   "category": "road"
+  },
+  {
+   "text": "डांबरीकरण उखडले आहे रस्ता खराब झाला",
+   "category": "road"
+  },
+  {
+   "text": "सड़क टूटी हुई है गड्ढों में पानी भरा है",
+   "category": "road"
+  },
+  {
+   "text": "पुल की सड़क पर बड़ी दरारें आ गई हैं",
+   "category": "road"
+  },
+  {
+   "text": "rastyat khup khadde aahet bike ghasarte",
+   "category": "road"
+  },
+  {
+   "text": "signal kaam nahi kar raha chowk pe jam hai",
+   "category": "traffic"
+  },
+  {
+   "text": "log galat jagah gaadi park karte hain rasta band",
+   "category": "traffic"
+  },
+  {
+   "text": "school ke time bahut traffic jam hota hai",
+   "category": "traffic"
+  },
+  {
+   "text": "सिग्नल बंद असल्याने चौकात वाहतूक कोंडी",
+   "category": "traffic"
+  },
+  {
+   "text": "रस्त्यावर बेशिस्त पार्किंगमुळे गाड्या अडकतात",
+   "category": "traffic"
+  },
+  {
+   "text": "चौराहे पर ट्रैफिक सिग्नल खराब है",
+   "category": "traffic"
+  },
+  {
+   "text": "गलत पार्किंग से एंबुलेंस फंस गई",
+   "category": "traffic"
+  },
+  {
+   "text": "chowkat signal band aahe traffic jam",
+   "category": "traffic"
+  },
+  {
+   "text": "raat ko der tak dj baj raha hai",
+   "category": "noise"
+  },
+  {
+   "text": "padosi ka loudspeaker bahut tez hai",
+   "category": "noise"
+  },
+  {
+   "text": "construction ka shor raat bhar chalta hai",
+   "category": "noise"
+  },
+  {
+   "text": "रात्री उशिरापर्यंत डीजेचा आवाज सुरू असतो",
+   "category": "noise"
+  },
+  {
+   "text": "मंदिराच्या भोंग्याचा खूप मोठा आवाज",
+   "category": "noise"
+  },
+  {
+   "text": "रात में तेज़ आवाज़ में लाउडस्पीकर बज रहा है",
+   "category": "noise"
+  },
+  {
+   "text": "पड़ोस में देर रात तक पार्टी का शोर",
+   "category": "noise"
+  },
+  {
+   "text": "ratri dj cha khup aawaz aahe zop yet nahi",
+   "category": "noise"
+  },
+  {
+   "text": "building ki deewar me badi daraar aa gayi hai",
+   "category": "housing"
+  },
+  {
+   "text": "chhat ka plaster gir raha hai bacche dar gaye",
+   "category": "housing"
+  },
+  {
+   "text": "purani imarat kabhi bhi gir sakti hai",
+   "category": "housing"
+  },
+  {
+   "text": "इमारतीच्या भिंतीला तडे गेले आहेत",
+   "category": "housing"
+  },
+  {
+   "text": "छताचे प्लास्टर कोसळत आहे धोकादायक",
+   "category": "housing"
+  },
+  {
+   "text": "पुरानी इमारत जर्जर हालत में है गिर सकती है",
+   "category": "housing"
+  },
+  {
+   "text": "दीवार में दरार आ गई है छत से पानी टपकता है",
+   "category": "housing"
+  },
+  {
+   "text": "building chi bhint padnyachya avasthet aahe",
+   "category": "housing"
+  },
+  {
+   "text": "aandhi me bada ped gir gaya rasta band hai",
+   "category": "environment"
+  },
+  {
+   "text": "park me ghaas bahut badh gayi hai koi dekhta nahi",
+   "category": "environment"
+  },
+  {
+   "text": "sukha ped kabhi bhi gir sakta hai",
+   "category": "environment"
+  },
+  {
+   "text": "वादळामुळे मोठे झाड कोसळले आहे",
+   "category": "environment"
+  },
+  {
+   "text": "बागेत झाडांच्या फांद्या तुटून पडल्या आहेत",
+   "category": "environment"
+  },
+  {
+   "text": "पार्क में पेड़ की डाली टूटकर लटक रही है",
+   "category": "environment"
+  },
+  {
+   "text": "बगीचे की देखभाल नहीं हो रही",
+   "category": "environment"
+  },
+  {
+   "text": "zhaad padla aahe rasta band zala",
+   "category": "environment"
+  },
+  {
+   "text": "factory se kala dhua nikal raha hai saans lena mushkil",
+   "category": "pollution"
+  },
+  {
+   "text": "nadi me chemical waala paani chhoda ja raha hai",
+   "category": "pollution"
+  },
+  {
+   "text": "construction ki dhool se hawa kharab hai",
+   "category": "pollution"
+  },
+  {
+   "text": "कारखान्यातून काळा धूर निघत आहे",
+   "category": "pollution"
+  },
+  {
+   "text": "हवेत खूप धूळ आणि प्रदूषण आहे",
+   "category": "pollution"
+  },
+  {
+   "text": "फैक्ट्री का ज़हरीला धुआं बस्ती में फैल रहा है",
+   "category": "pollution"
+  },
+  {
+   "text": "नदी में रसायन मिला पानी छोड़ा जा रहा है",
+   "category": "pollution"
+  },
+  {
+   "text": "karkhanyatun vishari dhur yetoy",
+   "category": "pollution"
+  },
+  {
+   "text": "gali me awara kutte logo ko kaat rahe hain",
+   "category": "animals"
+  },
+  {
+   "text": "sadak pe gaay bhains baithi rehti hai",
+   "category": "animals"
+  },
+  {
+   "text": "bandar ghar me ghus kar saman le jaate hain",
+   "category": "animals"
+  },
+  {
+   "text": "भटक्या कुत्र्यांनी मुलाला चावा घेतला",
+   "category": "animals"
+  },
+  {
+   "text": "रस्त्यावर जनावरे फिरत असतात",
+   "category": "animals"
+  },
+  {
+   "text": "आवारा कुत्ते बच्चों के पीछे भागते हैं",
+   "category": "animals"
+  },
+  {
+   "text": "घर के आंगन में सांप निकला है",
+   "category": "animals"
+  },
+  {
+   "text": "bhatke kutre khup aahet raatri bhuktat",
+   "category": "animals"
+  },
+  {
+   "text": "bus time pe nahi aati roz late hoti hai",
+   "category": "public_transport"
+  },
+  {
+   "text": "auto wale meter se nahi chalte zyada kiraya maangte",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus stop ka shelter toota hua hai",
+   "category": "public_transport"
+  },
+  {
+   "text": "बस वेळेवर येत नाही प्रवाशांचे हाल",
+   "category": "public_transport"
+  },
+  {
+   "text": "रिक्षावाले जास्त भाडे मागतात",
+   "category": "public_transport"
+  },
+  {
+   "text": "बस स्टॉप पर बस रुकती नहीं है",
+   "category": "public_transport"
+  },
+  {
+   "text": "मेट्रो स्टेशन की लिफ्ट बंद पड़ी है",
+   "category": "public_transport"
+  },
+  {
+   "text": "bus thamba todla aahe bus vel var yet nahi",
+   "category": "public_transport"
+  },
+  {
+   "text": "footpath pe thele walon ne kabza kar liya hai",
+   "category": "encroachment"
+  },
+  {
+   "text": "sarkari zameen par avaidh nirmaan ho raha hai",
+   "category": "encroachment"
+  },
+  {
+   "text": "dukaan ka saaman sadak tak rakha hai",
+   "category": "encroachment"
+  },
+  {
+   "text": "पदपथावर फेरीवाल्यांचे अतिक्रमण आहे",
+   "category": "encroachment"
+  },
+  {
+   "text": "मोकळ्या जागेवर अनधिकृत बांधकाम सुरू आहे",
+   "category": "encroachment"
+  },
+  {
+   "text": "फुटपाथ पर दुकानदारों ने कब्ज़ा कर लिया है",
+   "category": "encroachment"
+  },
+  {
+   "text": "सरकारी ज़मीन पर अवैध झोपड़ियां बना ली गई हैं",
+   "category": "encroachment"
+  },
+  {
+   "text": "footpath var feriwale basle aahet chalayla jaga nahi",
+   "category": "encroachment"
+  },
+  {
+   "text": "raat ko gali me chori ki ghatnaye badh gayi hain",
+   "category": "public_safety"
+  },
+  {
+   "text": "bike wale chain chheen kar bhaag gaye",
+   "category": "public_safety"
+  },
+  {
+   "text": "nukkad pe sharabi log ladkiyon ko chhedte hain",
+   "category": "public_safety"
+  },
+  {
+   "text": "रात्री गल्लीत गुंडांचा वावर असतो असुरक्षित वाटते",
+   "category": "public_safety"
+  },
+  {
+   "text": "आमच्या सोसायटीत चोरी झाली आहे",
+   "category": "public_safety"
+  },
+  {
+   "text": "मोहल्ले में रात को लूटपाट हो रही है",
+   "category": "public_safety"
+  },
+  {
+   "text": "पार्क में नशेड़ी लोग बैठे रहते हैं",
+   "category": "public_safety"
+  },
+  {
+   "text": "rasta var mulinchi chhed kadhli jaate police nahi",
+   "category": "public_safety"
+  },
+  {
+   "text": "area me bahut machhar hain dengue ke case aa rahe",
+   "category": "health"
+  },
+  {
+   "text": "sarkari hospital me doctor nahi milte",
+   "category": "health"
+  },
+  {
+   "text": "gali me fogging nahi hui bukhar phail raha hai",
+   "category": "health"
+  },
+  {
+   "text": "डासांमुळे परिसरात डेंग्यूचे रुग्ण वाढले",
+   "category": "health"
+  },
+  {
+   "text": "आरोग्य केंद्रात औषधे मिळत नाहीत",
+   "category": "health"
+  },
+  {
+   "text": "इलाके में मलेरिया के मरीज़ बढ़ गए हैं",
+   "category": "health"
+  },
+  {
+   "text": "अस्पताल में एम्बुलेंस समय पर नहीं आती",
+   "category": "health"
+  },
+  {
+   "text": "dasanchi favarni kara dengue vadhla aahe",
+   "category": "health"
+  }
+ ]
+}

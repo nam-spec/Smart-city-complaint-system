@@ -1,5 +1,13 @@
 flask
 scikit-learn
 pandas
+numpy
 joblib
 gunicorn
+h3
+pillow
+# multilingual sentence encoder (Hindi / Marathi / Hinglish understanding)
+sentence-transformers
+# CLIP image classification + text-image matching
+torch
+transformers

@@ -6,6 +6,7 @@ const surgeRoutes = require("./routes/surgeRoutes");
 const authRoutes = require("./routes/authRoutes");
 const testRoutes = require("./routes/testRoutes");
 const complaintRoutes = require("./routes/complaintRoutes");
+const alertRoutes = require("./routes/alertRoutes");
 
 const app = express();
 
@@ -21,6 +22,7 @@ app.use("/api/test", testRoutes);
 app.use("/api/complaints", complaintRoutes);
 app.use("/api/analytics/surges", surgeRoutes);
 app.use("/api/analytics", analyticsRoutes);
+app.use("/api/alerts", alertRoutes);
 
 app.get("/api/health",(req,res)=>{
     res.status(200).json({status:"Backend is running"});
