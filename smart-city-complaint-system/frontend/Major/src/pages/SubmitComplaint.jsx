@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import api from "../api/axios";
+import api, { BACKEND_URL } from "../api/axios";
 import { languageLabel, categoryLabel } from "../utils/labels";
 
 const VERDICT = {
@@ -101,7 +101,16 @@ function SubmitComplaint() {
       setLongitude(null);
     } catch (error) {
       console.error(error);
-      alert("Submission failed. Please check backend status.");
+      // Say exactly what went wrong instead of a generic message
+      if (!error.response) {
+        alert(`Cannot reach the backend at ${BACKEND_URL}.\n\nIs the backend running (npm run dev in the backend folder)? ` +
+              `Open ${BACKEND_URL}/api/health in a new tab to check.`);
+      } else if (error.response.status === 401 || error.response.status === 403) {
+        alert("Your login has expired or is not a citizen account. Please log out and log in again.");
+      } else {
+        alert(`Submission failed (${error.response.status}): ${error.response.data?.message || error.message}` +
+              (error.response.data?.error ? `\n\nDetails: ${error.response.data.error}` : ""));
+      }
     } finally {
       setSubmitting(false);
     }

@@ -209,8 +209,8 @@ exports.createComplaint = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Failed to submit complaint" });
+    console.error("[createComplaint] failed:", error);
+    res.status(500).json({ message: "Failed to submit complaint", error: error.message });
   }
 };
 

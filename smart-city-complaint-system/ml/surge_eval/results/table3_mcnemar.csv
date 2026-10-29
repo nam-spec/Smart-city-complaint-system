@@ -1,0 +1,9 @@
+Comparison,Only proposed detects,Only baseline detects,Exact McNemar p
+Proposed (multi-scale) vs Proposed (10 min),295,0,3.1e-89
+Proposed (multi-scale) vs Deployed v1,686,6,1.5e-194
+Proposed (multi-scale) vs Poisson raw,484,1,9.7e-144
+Proposed (multi-scale) vs Poisson city-uniform,465,5,1.2e-130
+Proposed (multi-scale) vs Count threshold,769,2,4.8e-227
+Proposed (multi-scale) vs EWMA,130,8,1.6e-29
+Proposed (multi-scale) vs Poisson CUSUM,633,66,3.6e-117
+Proposed (multi-scale) vs Space-time scan,163,0,1.7e-49

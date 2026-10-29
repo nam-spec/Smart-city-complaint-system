@@ -1,0 +1,11 @@
+cat,start,minutes,n_complaints,peak_score,lat,lon,top_descriptor,top_share
+environment,2022-03-17 14:00,110,51,86.28,40.77899,-73.91677,Tree Leaning/Uprooted,0.725
+noise,2022-03-16 09:45,125,235,73.69,40.89187,-73.86017,Loud Music/Party,1.0
+environment,2022-03-25 16:00,80,91,63.63,40.60489,-73.96368,For One Address,1.0
+environment,2022-03-17 09:25,25,17,61.51,40.77899,-73.91677,Tree Leaning/Uprooted,1.0
+housing,2022-03-17 02:10,25,14,52.84,40.7076,-74.00572,CABINET,0.143
+housing,2022-03-12 00:10,70,25,45.64,40.65444,-73.93578,FLOOR,0.2
+housing,2022-03-12 00:05,75,11,45.64,40.65339,-73.95082,FLOOR,0.182
+environment,2022-03-31 07:05,20,10,45.46,40.63359,-74.02395,For One Address,1.0
+road,2022-03-13 17:25,20,10,42.29,40.56771,-74.13976,Pothole,1.0
+noise,2022-03-28 13:10,240,508,41.27,40.89174,-73.86006,Loud Music/Party,0.992
